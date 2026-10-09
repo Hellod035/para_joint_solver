@@ -1,0 +1,34 @@
+id: tiangong
+topology: dual_crank_two_rod
+description: Unofficial Tiangong ankle, ideal dual-crank geometry.
+sources: ['https://github.com/feidedao/Parallel_Ankle_Joint/tree/main/5_tiangong']
+output:
+  joints:
+  - name: pitch
+    position: [0.0, 0.0, 0.0]
+    axis: [0.0, 1.0, 0.0]
+    limits: [-1.22, 0.5236]
+  - name: roll
+    position: [0.0, 0.0, 0.0]
+    axis: [1.0, 0.0, 0.0]
+    limits: [-0.4363, 0.4363]
+branches:
+  A:
+    motor:
+      position: [0.0, 0.04325, 0.215]
+      axis: [0.0, 1.0, 0.0]
+      limits: [-1.6, 1.6]
+    crank_tip: [-0.05582, 0.04325, 0.237]
+    platform_anchor: [-0.05582, 0.04325, 0.022]
+    rod_length: 0.215
+  B:
+    motor:
+      position: [0.0, -0.04325, 0.14]
+      axis: [0.0, 1.0, 0.0]
+      limits: [-1.6, 1.6]
+    crank_tip: [-0.05582, -0.04325, 0.162]
+    platform_anchor: [-0.05582, -0.04325, 0.022]
+    rod_length: 0.14
+assembly:
+  home_rp: [0.0, 0.0]
+  motor_reference: [0.0, 0.0]

@@ -1,0 +1,41 @@
+[build-system]
+requires = ["hatchling>=1.26"]
+build-backend = "hatchling.build"
+
+[project]
+name = "para-joint-solver"
+version = "0.1.0"
+description = "Configurable dual-crank, two-rod parallel joint kinematics and verification"
+readme = "README.md"
+requires-python = ">=3.11,<3.14"
+dependencies = ["numpy>=2.0,<3", "scipy>=1.14,<2", "PyYAML>=6,<7"]
+
+[project.optional-dependencies]
+sim = ["mujoco>=3.3,<4"]
+visual = ["matplotlib>=3.9,<4", "Pillow>=11,<13"]
+all = ["para-joint-solver[sim,visual]"]
+
+[dependency-groups]
+dev = ["pytest>=8,<10", "ruff>=0.11,<1"]
+
+[project.scripts]
+pjs = "para_joint_solver.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/para_joint_solver"]
+
+[tool.hatch.build.targets.wheel.force-include]
+robots = "para_joint_solver/robots"
+
+[tool.hatch.build.targets.sdist]
+include = ["src/", "robots/", "docs/", "tests/", "scripts/", "README.md", "pyproject.toml", "uv.lock", ".python-version"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["integration: optional MuJoCo and rendering checks"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]

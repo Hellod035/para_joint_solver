@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parallel joint inspector</title>
+<style>
+*{box-sizing:border-box}
+html{height:100%}
+body{margin:0;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#101823;color:#dce7f1;font:13px system-ui,sans-serif}
+header{padding:10px 16px;border-bottom:1px solid #304052;display:flex;align-items:center;justify-content:space-between;gap:12px}
+h1{margin:0;font-size:18px}header p{margin:3px 0 0;color:#9db1c5;font-size:11px}
+main{display:grid;grid-template-columns:minmax(0,1fr) clamp(300px,28vw,360px);gap:10px;padding:10px;min-height:0;width:100%;max-width:1800px;margin:auto;height:100%}
+main>section{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
+aside{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:8px;min-height:0}
+.panel{background:#192635;border:1px solid #304052;border-radius:8px;padding:10px;min-width:0}
+h2{font-size:13px;margin:0 0 6px}.panel-title{display:flex;align-items:center;justify-content:space-between;gap:8px}.panel-title h2{margin:0}
+.render{position:relative;display:grid;grid-template-rows:minmax(0,1fr) auto;flex:1;min-height:0;padding:0;overflow:hidden}
+#image{width:100%;height:100%;min-height:0;display:block;object-fit:contain;background:#91a4bf;cursor:grab;touch-action:none;user-select:none}
+#image.dragging{cursor:grabbing}
+.caption{padding:6px 10px;color:#abc0d4;font-size:11px}
+.input-panel{display:flex;flex-direction:column;justify-content:space-between;gap:6px;min-height:0}
+.mode{display:flex;gap:6px}button{cursor:pointer;background:#2b3c50;color:#e1edf5;border:1px solid #486075;border-radius:5px;padding:6px 10px;white-space:nowrap;font:inherit}
+button.selected{background:#197693;border-color:#39afcc;color:white}
+.row{display:grid;grid-template-columns:62px minmax(0,1fr) 108px;align-items:center;gap:8px;margin:5px 0}
+input[type=range]{width:100%;min-width:0;margin:0;accent-color:#29b5cf}
+.feasible-range{appearance:none;-webkit-appearance:none;background:transparent;height:18px}
+.feasible-range::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:linear-gradient(to right,#344254 0% var(--feasible-start,0%),#a0acb8 var(--feasible-start,0%) var(--feasible-end,100%),#344254 var(--feasible-end,100%) 100%)}
+.feasible-range::-moz-range-track{height:6px;border-radius:3px;background:linear-gradient(to right,#344254 0% var(--feasible-start,0%),#a0acb8 var(--feasible-start,0%) var(--feasible-end,100%),#344254 var(--feasible-end,100%) 100%)}
+.feasible-range::-webkit-slider-thumb{-webkit-appearance:none;width:14px;height:14px;margin-top:-4px;border:1px solid #69cfe0;border-radius:50%;background:#29b5cf}
+.feasible-range::-moz-range-thumb{width:12px;height:12px;border:1px solid #69cfe0;border-radius:50%;background:#29b5cf}
+input[type=number]{width:100%;min-width:0;background:#0f1c28;color:#e4eef7;border:1px solid #496071;border-radius:4px;padding:4px;font:12px ui-monospace,monospace}
+input:disabled{opacity:.8}
+.limit{font-size:11px;line-height:1.3;color:#a8bed0;margin:0 0 6px;font-variant-numeric:tabular-nums}
+.limit.near{color:#ffd279}.limit.outside{color:#ff9e92}.limit.inside{color:#8eceae}
+.hint{font-size:11px;color:#99aec1;line-height:1.3;margin:0}
+.metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.metric{padding:7px;background:#0f1c28;border-radius:5px}.metric small{display:block;color:#91aabf;margin-bottom:4px;font-size:10px}.metric strong{font:14px ui-monospace,monospace}
+.pair{display:grid;grid-template-columns:62px minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center;margin:5px 0}
+.error{position:absolute;top:10px;left:10px;max-width:calc(100% - 20px);pointer-events:none;white-space:pre-wrap;overflow-wrap:anywhere;color:#ffc6bd;background:#492825ed;border:1px solid #865249;padding:8px;border-radius:6px;display:none;font-size:11px;line-height:1.3}
+.output{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px 12px;margin-top:8px;align-items:start}
+.output small{display:block;color:#91aabf;font-size:10px}.output code{font:12px ui-monospace,monospace;white-space:pre;line-height:1.35;color:#c7dbe8}
+#status{font-size:11px;color:#8eceae;font-weight:normal}
+@media(max-width:1100px){.output{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-height:650px){body{font-size:11px}header{padding:6px 12px}h1{font-size:16px}main{padding:6px;gap:6px}aside,main>section{gap:6px}.panel{padding:7px}.render{padding:0}.input-panel{gap:3px}h2{font-size:12px;margin-bottom:4px}.row,.pair{margin:3px 0;gap:6px}input[type=number]{padding:3px;font-size:11px}button{padding:4px 8px}.limit{font-size:10px;margin-bottom:3px}.hint{font-size:10px}.metric{padding:5px}.metric small{margin-bottom:2px}.output{margin-top:5px;gap:3px 10px}.output code{font-size:11px}.caption{padding:4px 8px}}
+</style>
+
+<header><div><h1>Parallel joint · <span id="robot">Loading</span></h1><p>Adjust AB or RP and compare the six-part model with MuJoCo geometry</p></div><button id="reset">Reset Home</button></header>
+<main>
+<section>
+  <div class="panel render"><img id="image" alt="Live MuJoCo model" draggable="false" aria-describedby="camera-help"><div class="caption"><span id="camera-help">Drag to rotate · Scroll to zoom · Double-click to reset view</span><br>Gray: base · Blue: output · Orange: cranks · Silver: rods</div><div class="error" id="error" role="alert"></div></div>
+  <div class="panel"><h2>Cross-validation <span id="status" title="Core position, Jacobian, velocity and torque computation only."></span></h2><div class="metrics">
+    <div class="metric"><small>RP error / rad</small><strong id="poseError">—</strong></div>
+    <div class="metric"><small>Closure gap / m</small><strong id="rodGap">—</strong></div>
+    <div class="metric"><small>Velocity error / rad·s⁻¹</small><strong id="velError">—</strong></div>
+    <div class="metric"><small>Torque error / N·m</small><strong id="tauError">—</strong></div>
+  </div><div class="output" id="output">
+    <div><small>Solved RP / rad</small><code id="outRP">—</code></div>
+    <div><small>Solved AB / rad</small><code id="outAB">—</code></div>
+    <div><small>Jacobian dAB/dRP</small><code id="outJ">—</code></div>
+    <div><small>dq_RP / rad·s⁻¹</small><code id="outVelocity">—</code></div>
+    <div><small>Torque AB / N·m</small><code id="outTorque">—</code></div>
+    <div><small>Condition number</small><code id="outCondition">—</code></div>
+  </div></div>
+</section>
+<aside>
+  <div class="panel input-panel"><div class="panel-title"><h2>Input</h2><div class="mode"><button id="mode-rp" class="selected">Adjust RP</button><button id="mode-ab">Adjust AB</button></div></div>
+    <div id="controls-rp"><strong>Output angles RP / rad</strong>
+      <div class="row"><label>Roll</label><input id="rp0" class="feasible-range" aria-label="Roll slider" type="range" min="-1" max="1" step="any" value="0"><input id="rp0n" aria-label="Roll angle" type="number" step="0.001" value="0"></div><div id="rp0limit" class="limit">Loading limits…</div>
+      <div class="row"><label>Pitch</label><input id="rp1" class="feasible-range" aria-label="Pitch slider" type="range" min="-1" max="1" step="any" value="0"><input id="rp1n" aria-label="Pitch angle" type="number" step="0.001" value="0"></div><div id="rp1limit" class="limit">Loading limits…</div>
+    </div>
+    <div id="controls-ab"><strong>Motor angles AB / rad</strong>
+      <div class="row"><label>A</label><input id="ab0" aria-label="A slider" type="range" min="-1" max="1" step="any" value="0"><input id="ab0n" aria-label="A angle" type="number" step="0.001" value="0"></div><div id="ab0limit" class="limit">Loading limits…</div>
+      <div class="row"><label>B</label><input id="ab1" aria-label="B slider" type="range" min="-1" max="1" step="any" value="0"><input id="ab1n" aria-label="B angle" type="number" step="0.001" value="0"></div><div id="ab1limit" class="limit">Loading limits…</div>
+    </div>
+    <p class="hint">Gray RP track: feasible at the current other angle.<br>Yellow: &lt;5% travel left. Red: limit exceeded.<br>Dragging stops at the feasible boundary.</p>
+  </div>
+  <div class="panel"><h2>Velocity and torque inputs</h2>
+    <p class="pair"><label>dq_AB</label><input id="dq0" type="number" step="0.1" value="0.1"><input id="dq1" type="number" step="0.1" value="-0.1"></p>
+    <p class="pair"><label>τ_RP</label><input id="tau0" type="number" step="0.1" value="1"><input id="tau1" type="number" step="0.1" value="1"></p>
+    <p class="hint">dq_AB [A,B] in rad/s; torque RP [roll,pitch] in N·m.</p>
+  </div>
+</aside>
+</main>
+<script>
+const el=id=>document.getElementById(id);
+let mode='rp', pending=null, pendingCamera=null, busy=false, revision=0, lastData=null;
+let camera={azimuth:135,elevation:-18,zoom:1}, drag=null;
+const axes=['rp','ab'];
+const angles={rp:[0,0],ab:[0,0]};
+function controls(){for(const group of axes){el('mode-'+group).classList.toggle('selected',group===mode);for(let i=0;i<2;i++)for(const suffix of ['','n'])el(group+i+suffix).disabled=!lastData||group!==mode||(group==='rp'&&suffix===''&&!lastData.feasible_rp[i])}}
+function limitLabel(group,i,value){
+  if(!lastData)return;
+  const info=lastData.limits[group][i], target=el(group+i+'limit');
+  const range=lastData.slider_ranges[group][i];
+  target.style.whiteSpace='pre-line';
+  const feasible=group==='rp'?lastData.feasible_rp[i]:null;
+  const feasibleLabel=feasible?'Feasible ['+feasible.map(v=>v.toFixed(3)).join(', ')+'] at current '+(i===0?'Pitch':'Roll'):'No feasible interval in this display range';
+  if(info.lower===null){
+    target.className='limit';target.textContent='Display ['+range.map(v=>v.toFixed(3)).join(', ')+'] rad · AB-coupled\n'+feasibleLabel;return;
+  }
+  const margin=Math.min(value-info.lower,info.upper-value), side=value-info.lower<info.upper-value?'lower limit':'upper limit';
+  const status=margin < -1e-10?'outside':margin<=.05*(info.upper-info.lower)?'near':'inside';
+  target.className='limit '+status;
+  target.textContent='Limits ['+info.lower.toFixed(3)+', '+info.upper.toFixed(3)+'] rad · '+(status==='outside'?'Over '+side+' by '+(-margin).toFixed(4):'To '+side+' '+Math.max(0,margin).toFixed(4))+' rad'+(status==='near'?' · Near limit':'');
+  if(group==='rp')target.textContent+='\n'+feasibleLabel;
+}
+function updateRange(group,i){
+  const slider=el(group+i);
+  if(lastData){
+    const range=lastData.slider_ranges[group][i];
+    slider.min=range[0];slider.max=range[1];
+    if(group==='rp'){
+      const feasible=lastData.feasible_rp[i];
+      const percent=v=>100*clamp((v-range[0])/(range[1]-range[0]),0,1)+'%';
+      slider.style.setProperty('--feasible-start',feasible?percent(feasible[0]):'0%');
+      slider.style.setProperty('--feasible-end',feasible?percent(feasible[1]):'0%');
+    }
+  }
+}
+function setAngle(group,i,value,number=true){
+  angles[group][i]=value;
+  const slider=el(group+i);
+  updateRange(group,i);
+  slider.value=value;
+  if(number)el(group+i+'n').value=value.toFixed(8);
+  limitLabel(group,i,value);
+}
+function requestUpdate(reset=false){
+  const request={mode,q:[...angles[mode]],reset,
+    dq_ab:[el('dq0').valueAsNumber,el('dq1').valueAsNumber],tau_rp:[el('tau0').valueAsNumber,el('tau1').valueAsNumber],
+    revision:++revision};
+  if(![...request.q,...request.dq_ab,...request.tau_rp].every(Number.isFinite)){
+    pending=null;el('status').textContent='Enter complete, finite numbers';return;
+  }
+  pending=request;send();
+}
+function paint(data,request){
+  if(!lastData)camera=data.camera;
+  lastData=data;el('robot').textContent=data.robot;el('image').src=data.image;
+  for(const group of axes)for(let i=0;i<2;i++){
+    // Always update the computed side. Never overwrite a newer active input.
+    if(group!==mode||request.revision===revision)setAngle(group,i,data['q_'+group][i]);
+    else{updateRange(group,i);limitLabel(group,i,angles[group][i])}
+  }
+  controls();
+  for(const [id,key] of [['poseError','pose_error_rad'],['rodGap','rod_gap_m'],['velError','velocity_error'],['tauError','torque_error']])el(id).textContent=data[key].toExponential(2);
+  const pair=x=>'['+x.map(v=>v.toFixed(6)).join(', ')+']';
+  for(const [id,value] of [['outRP',data.q_rp],['outAB',data.q_ab],['outVelocity',data.dq_rp],['outTorque',data.tau_ab]])el(id).textContent=pair(value);
+  el('outCondition').textContent=data.condition.toFixed(3);
+  el('outJ').textContent=pair(data.J[0])+'\n'+pair(data.J[1]);
+}
+function showError(data){
+  const labels={limit:'Outside configured limits',unreachable:'Closed-chain pose is unreachable',singular:'Near a singular configuration',convergence:'Forward solve did not converge from this seed',input:'Invalid input'};
+  let message=labels[data.kind]||'Request failed';
+  if(data.violation){
+    const v=data.violation, names=v.coordinates==='q_ab'?['A','B']:['Roll','Pitch'];
+    for(let i=0;i<2;i++)if(v.limits[i].status==='outside'){
+      const l=v.limits[i];message+='\n'+names[i]+' = '+v.values[i].toFixed(5)+' rad; limits ['+l.lower.toFixed(3)+', '+l.upper.toFixed(3)+']';
+    }
+  }
+  el('error').textContent=message+'\nThe model and solved results retain the last valid pose.\n'+data.error;
+  el('error').style.display='block';el('status').textContent=labels[data.kind]||'Connection failed';
+}
+async function send(){
+  if(busy||(!pending&&!pendingCamera))return;busy=true;
+  const cameraOnly=!pending, request=cameraOnly?pendingCamera:pending;
+  if(cameraOnly)pendingCamera=null;else pending=null;
+  if(!cameraOnly)el('status').textContent='Solving…';
+  try{
+    const response=await fetch(cameraOnly?'/camera':'/state',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(request)});
+    const data=await response.json();
+    if(response.ok){
+      if(cameraOnly)el('image').src=data.image;
+      else{
+        paint(data,request);
+        if(request.revision===revision){el('error').style.display='none';el('status').textContent='Core solve · '+data.solve_time_ms.toFixed(3)+' ms'}
+      }
+    }else if(cameraOnly||request.revision===revision)showError(data);
+  }catch(error){if(cameraOnly||request.revision===revision)showError({error:error.message})}
+  finally{busy=false;if(pending||pendingCamera)send()}
+}
+for(const group of axes){
+  el('mode-'+group).onclick=()=>{
+    mode=group;controls();if(lastData)for(const g of axes)for(let i=0;i<2;i++)setAngle(g,i,lastData['q_'+g][i]);requestUpdate();
+  };
+  for(let i=0;i<2;i++){
+    el(group+i).oninput=()=>{
+      let value=Number(el(group+i).value);
+      if(group==='rp'){
+        const feasible=lastData.feasible_rp[i];if(!feasible)return;
+        value=clamp(value,feasible[0],feasible[1]);
+      }
+      setAngle(group,i,value);requestUpdate();
+    };
+    el(group+i+'n').oninput=()=>{const v=el(group+i+'n').valueAsNumber;angles[group][i]=v;if(Number.isFinite(v))setAngle(group,i,v,false);requestUpdate()};
+  }
+}
+const viewport=el('image'), clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
+function requestCamera(){pendingCamera={...camera};send()}
+viewport.onpointerdown=event=>{
+  if(!lastData||!event.isPrimary||event.button!==0)return;
+  event.preventDefault();viewport.setPointerCapture(event.pointerId);
+  drag={id:event.pointerId,x:event.clientX,y:event.clientY};viewport.classList.add('dragging');
+};
+viewport.onpointermove=event=>{
+  if(!drag||event.pointerId!==drag.id)return;
+  camera.azimuth=(camera.azimuth-(event.clientX-drag.x)*.4+360)%360;
+  camera.elevation=clamp(camera.elevation-(event.clientY-drag.y)*.4,-85,85);
+  drag.x=event.clientX;drag.y=event.clientY;requestCamera();
+};
+function endDrag(event){
+  if(!drag||event.pointerId!==drag.id)return;
+  drag=null;viewport.classList.remove('dragging');
+  if(viewport.hasPointerCapture(event.pointerId))viewport.releasePointerCapture(event.pointerId);
+}
+viewport.onpointerup=viewport.onpointercancel=viewport.onlostpointercapture=endDrag;
+viewport.addEventListener('wheel',event=>{
+  event.preventDefault();if(!lastData)return;
+  const pixels=event.deltaY*(event.deltaMode===1?16:event.deltaMode===2?viewport.clientHeight:1);
+  camera.zoom=clamp(camera.zoom*Math.exp(clamp(pixels,-200,200)*.001),.25,4);requestCamera();
+},{passive:false});
+viewport.ondblclick=()=>{if(lastData){camera={azimuth:135,elevation:-18,zoom:1};requestCamera()}};
+for(const id of ['dq0','dq1','tau0','tau1'])el(id).oninput=()=>requestUpdate();
+el('reset').onclick=()=>{
+  // Home also recovers from an unfinished/invalid numeric edit.
+  if(lastData)for(const g of axes)for(let i=0;i<2;i++)setAngle(g,i,lastData['q_'+g][i]);requestUpdate(true);
+};
+controls();requestUpdate(true);
+</script>
+</html>

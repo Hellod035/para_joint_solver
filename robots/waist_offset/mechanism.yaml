@@ -1,0 +1,37 @@
+id: waist_offset
+topology: dual_crank_two_rod
+description: 'Original asymmetric waist: separated axes, nonzero home, calibrated coordinates and mesh
+  visual.'
+sources: []
+output:
+  joints:
+  - name: pitch
+    position: [0.0, 0.0, 0.17]
+    axis: [0.0, 1.0, 0.0]
+    scale: -0.9
+  - name: roll
+    position: [0.00936612158685037, 0.003, 0.19553969002201]
+    axis: [0.998595828739259, 0.0, -0.052975190651396]
+    scale: 1.1
+branches:
+  A:
+    motor:
+      position: [0.0, 0.092, 0.025]
+      axis: [0.0, 1.0, 0.0]
+      scale: -1.2
+      limits: [-1.4, 1.4]
+    crank_tip: [0.0534909211597047, 0.095, 0.0165904011102638]
+    platform_anchor: [0.0728695222844362, 0.0719722844037581, 0.203359030401412]
+    rod_length: 0.189178029259286
+  B:
+    motor:
+      position: [0.007, -0.085, 0.014]
+      axis: [0.0, 1.0, 0.0]
+      scale: 0.8
+      limits: [-1.4, 1.4]
+    crank_tip: [0.054005914227325, -0.087, 0.0254212095529925]
+    platform_anchor: [0.0765808864899751, -0.0650147874844857, 0.197812147383088]
+    rod_length: 0.175247294951882
+assembly:
+  home_rp: [0.025, -0.02]
+  motor_reference: [0.04, -0.03]

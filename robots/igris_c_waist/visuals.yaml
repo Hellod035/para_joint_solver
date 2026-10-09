@@ -1,0 +1,22 @@
+bodies:
+- frame: base
+  type: mesh
+  file: meshes/base_platform.stl
+- frame: platform
+  type: mesh
+  file: meshes/output_platform.stl
+- frame: motor_A
+  type: mesh
+  file: meshes/crank_A.stl
+- frame: motor_B
+  type: mesh
+  file: meshes/crank_B.stl
+- frame: rod_A
+  type: mesh
+  file: meshes/rod_A.stl
+- frame: rod_B
+  type: mesh
+  file: meshes/rod_B.stl
+inspection:
+  roll: [-0.06, 0.06]
+  pitch: [-0.12, 0.06]

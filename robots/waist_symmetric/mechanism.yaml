@@ -1,0 +1,32 @@
+id: waist_symmetric
+topology: dual_crank_two_rod
+description: 'Original symmetric waist: intersecting roll-then-pitch axes, equal cranks and rods.'
+sources: []
+output:
+  joints:
+  - name: roll
+    position: [0.0, 0.0, 0.185]
+    axis: [1.0, 0.0, 0.0]
+  - name: pitch
+    position: [0.0, 0.0, 0.185]
+    axis: [0.0, 1.0, 0.0]
+branches:
+  A:
+    motor:
+      position: [0.0, 0.085, 0.025]
+      axis: [0.0, 1.0, 0.0]
+      limits: [-1.3, 1.3]
+    crank_tip: [0.05, 0.085, 0.025]
+    platform_anchor: [0.05, 0.085, 0.185]
+    rod_length: 0.16
+  B:
+    motor:
+      position: [0.0, -0.085, 0.025]
+      axis: [0.0, 1.0, 0.0]
+      limits: [-1.3, 1.3]
+    crank_tip: [0.05, -0.085, 0.025]
+    platform_anchor: [0.05, -0.085, 0.185]
+    rod_length: 0.16
+assembly:
+  home_rp: [0.0, 0.0]
+  motor_reference: [0.0, 0.0]

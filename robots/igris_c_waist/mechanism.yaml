@@ -1,0 +1,34 @@
+id: igris_c_waist
+topology: dual_crank_two_rod
+description: Idealized IGRIS-C waist geometry; excludes backlash joints and independent yaw.
+sources: ['https://github.com/robrosinc/igris_c_description_public/blob/main/mujoco/igris_c_v2.xml.xacro']
+output:
+  joints:
+  - name: pitch
+    position: [0.0, 0.0, 0.0]
+    axis: [0.0, -1.0, 0.0]
+    limits: [-0.872664626, 0.287979327]
+  - name: roll
+    position: [0.0, 0.0, 0.04]
+    axis: [-1.0, 0.0, 0.0]
+    limits: [-0.314159265, 0.314159265]
+branches:
+  A:
+    motor:
+      position: [0.0, 0.0905, 0.0]
+      axis: [0.0, 1.0, 0.0]
+      limits: [-0.34, 0.87]
+    crank_tip: [-0.05167, 0.0905, -0.00587]
+    platform_anchor: [-0.05, 0.094, 0.054]
+    rod_length: 0.0599954648286018
+  B:
+    motor:
+      position: [0.0, -0.0905, 0.0]
+      axis: [0.0, 1.0, 0.0]
+      limits: [-0.34, 0.87]
+    crank_tip: [-0.05167, -0.0905, -0.00587]
+    platform_anchor: [-0.05, -0.094, 0.054]
+    rod_length: 0.0599954648286018
+assembly:
+  home_rp: [0.0, 0.0]
+  motor_reference: [0.0, 0.0]

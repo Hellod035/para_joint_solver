@@ -1,0 +1,33 @@
+bodies:
+- frame: base
+  type: mesh
+  file: meshes/base_platform.stl
+- frame: platform
+  type: mesh
+  file: meshes/output_platform.stl
+  pose:
+    xyz: [0.0044708936652158, -0.00202249372656576, 0.008770440636612]
+    quat_wxyz: [0.999648114572049, 0.00124956079402804, 0.0264968778040373, -3.3121114505629e-05]
+- frame: motor_A
+  type: mesh
+  file: meshes/crank_A.stl
+  pose:
+    quat_wxyz: [0.999159617733445, 0.0, 0.0409885141320964, 0.0]
+- frame: motor_B
+  type: mesh
+  file: meshes/crank_B.stl
+  pose:
+    quat_wxyz: [0.998375939785744, 0.0, -0.0569691395137126, 0.0]
+- frame: rod_A
+  type: mesh
+  file: meshes/rod_A.stl
+  pose:
+    quat_wxyz: [0.999987436375272, 0.0, 0.0, -0.00501269304978972]
+- frame: rod_B
+  type: mesh
+  file: meshes/rod_B.stl
+  pose:
+    quat_wxyz: [0.999972531712984, 0.0, 0.0, -0.00741187017728615]
+inspection:
+  roll: [-0.12, 0.12]
+  pitch: [-0.16, 0.16]
