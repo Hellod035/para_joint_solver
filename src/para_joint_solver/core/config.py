@@ -186,9 +186,10 @@ def load_mechanism(robot, root=None):
             raise ConfigurationError(f"{name}: crank radius must be nonzero")
         anchor = vector(b["platform_anchor"], 3, name + ".platform_anchor")
         length = positive(b["rod_length"], name + ".rod_length")
-        if abs(np.linalg.norm(anchor - tip) - length) > 1e-9:
+        if abs(np.linalg.norm(anchor - tip) - length) > 5e-4:
             raise ConfigurationError(
-                f"{name}: reference crank_tip/platform_anchor distance must equal rod_length"
+                f"{name}: reference crank_tip/platform_anchor distance must equal rod_length "
+                "within 5e-4 m"
             )
         branches.append(Branch(motor, tip, anchor, length))
     limits = np.array([next(j.limits for j in output if j.name == n) for n in ("roll", "pitch")])

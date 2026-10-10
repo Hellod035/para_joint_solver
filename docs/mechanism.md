@@ -165,9 +165,10 @@ At the reference pose, each branch must satisfy:
 norm(platform_anchor - crank_tip) = rod_length
 ```
 
-The loader checks this consistency to `1e-9` m. The rod length cannot be changed
-independently while leaving an inconsistent pair of reference points. During motion,
-the solver enforces the same distance constraint using the moving attachment points.
+The loader accepts an absolute difference up to `5e-4` m (0.5 mm). This only sets
+the configuration check tolerance; the solver still checks the reference assembly
+and uses a `1e-9` m closure tolerance. During motion, it enforces the distance
+constraint using the moving attachment points.
 
 ### `assembly`
 
