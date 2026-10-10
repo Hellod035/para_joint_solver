@@ -45,7 +45,10 @@ def parser():
             validate.add_argument("--repeats", type=int, default=3)
     inspect = sub.add_parser("inspect", help="Real-time AB/RP sliders in a local browser")
     inspect.add_argument("robot")
-    inspect.add_argument("--port", type=int, default=8765)
+    inspect.add_argument(
+        "--port", type=int, default=8765,
+        help="Starting port (default: 8765); skips occupied ports. Use 0 for an OS-assigned port",
+    )
     inspect.add_argument("--no-browser", action="store_true")
     return p
 

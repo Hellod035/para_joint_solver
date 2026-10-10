@@ -1,6 +1,7 @@
 """Local browser controls for real-time AB/RP geometry inspection."""
 
 import base64
+import errno
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from io import BytesIO
 import json
@@ -187,6 +188,8 @@ class Inspector:
 
 
 def serve(solver, port=8765, open_browser=True):
+    if not 0 <= port <= 65535:
+        raise ValueError("Port must be between 0 and 65535")
     inspector = Inspector(solver)
     page = Path(__file__).with_name("inspector.html").read_bytes()
 
@@ -232,7 +235,15 @@ def serve(solver, port=8765, open_browser=True):
 
     # Single-thread server keeps all rendering on the context's original thread.
     try:
-        with HTTPServer(("127.0.0.1", port), Handler) as server:
+        while True:
+            try:
+                server = HTTPServer(("127.0.0.1", port), Handler)
+                break
+            except OSError as exc:
+                if exc.errno != errno.EADDRINUSE or port in (0, 65535):
+                    raise
+                port += 1
+        with server:
             url = f"http://127.0.0.1:{server.server_port}/"
             print(f"Inspect {solver.mechanism.id}: {url}  (Ctrl-C to stop)", flush=True)
             if open_browser:

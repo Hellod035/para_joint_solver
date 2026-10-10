@@ -21,7 +21,10 @@ uv run pjs inspect g1
 The local browser viewer provides live AB/RP sliders, joint limits and remaining
 travel, mesh rendering, and numerical comparison with MuJoCo. Invalid inputs
 retain the last valid pose. Drag the viewport to rotate, scroll to zoom, and
-double-click to reset the camera. Use `--port 8766` to change ports; Ctrl-C stops the server.
+double-click to reset the camera. The server starts at port 8765 (or `--port 8766`)
+and tries higher ports automatically if occupied. It prints the actual URL and
+opens that address in the browser. Use `--port 0` for an OS-assigned port;
+Ctrl-C stops the server.
 RP slider bounds stay fixed. Gray track segments show the feasible interval at the
 other angle; dragging stops at that interval's boundary. Numeric inputs remain explicit.
 The displayed solve time covers core position, Jacobian, velocity and torque computation.
