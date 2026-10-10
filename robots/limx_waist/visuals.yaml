@@ -1,0 +1,28 @@
+bodies:
+- frame: base
+  type: mesh
+  file: meshes/waist_pitch_link.STL
+- frame: platform
+  type: mesh
+  file: meshes/waist_yaw_link.STL
+  pose:
+    xyz: [0.0, 0.0, -0.057]
+- frame: motor_A
+  type: mesh
+  file: meshes/waist_A_link.STL
+- frame: motor_B
+  type: mesh
+  file: meshes/waist_B_link.STL
+- frame: rod_A
+  type: mesh
+  file: meshes/waist_A_rod_link.STL
+  pose:
+    quat_wxyz: [0.0, 0.9999999999695234, 0.0, 7.807254500176211e-06]
+- frame: rod_B
+  type: mesh
+  file: meshes/waist_B_rod_link.STL
+  pose:
+    quat_wxyz: [0.0, 0.9999999999695234, 0.0, 7.807254500176211e-06]
+inspection:
+  roll: [-0.16, 0.16]
+  pitch: [-0.18, 0.18]

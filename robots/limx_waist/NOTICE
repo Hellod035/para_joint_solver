@@ -1,0 +1,24 @@
+LimX HU_D04_01 腰部示例来源说明
+
+来源项目：LimX Dynamics / humanoid-description
+项目地址：https://github.com/limxdynamics/humanoid-description
+固定版本：a90f734c153aa3ecffc8b674af1e0a323cb55d1a
+上游许可证：Apache-2.0，原文保存在本目录 LICENSE。
+
+上游文件：
+  HU_D04_description/xml/HU_D04_01.xml
+  HU_D04_description/meshes/HU_D04_01/waist_pitch_link.STL
+  HU_D04_description/meshes/HU_D04_01/waist_yaw_link.STL
+  HU_D04_description/meshes/HU_D04_01/waist_A_link.STL
+  HU_D04_description/meshes/HU_D04_01/waist_B_link.STL
+  HU_D04_description/meshes/HU_D04_01/waist_A_rod_link.STL
+  HU_D04_description/meshes/HU_D04_01/waist_B_rod_link.STL
+
+本目录的六个 STL 保留上游文件的原始字节、名称和坐标系。
+tests/fixtures/limx_hu_d04_01.xml 保存上游 MJCF 的原始副本，供独立几何验证使用。
+
+本项目新增 mechanism.yaml 和 visuals.yaml，将腰部几何适配为双曲柄、双连杆模型：
+固定上部 waist_pitch_link，反向定义 pitch、roll 输出链，排除独立 yaw。
+中间转动件的网格不显示，其关节仍参与解算。
+STL 的显示装配变换单独保存在 visuals.yaml，不修改几何参数或原始网格。
+此示例验证模型的运动学，不包含实机标定，也不代表已验证 LimX SDK 的闭源解算算法。

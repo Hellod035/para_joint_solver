@@ -9,6 +9,7 @@ from para_joint_solver import available_robots, load_solver
 from para_joint_solver.simulation.backends import MujocoBackend
 from para_joint_solver.simulation.models import export_model
 from para_joint_solver.validation.numerical import validate_solver
+from para_joint_solver.visualization.config import load_visuals
 
 pytestmark = pytest.mark.integration
 mujoco = pytest.importorskip("mujoco")
@@ -140,7 +141,8 @@ def test_export_is_portable_with_meshes(name, tmp_path):
     model = mujoco.MjModel.from_xml_path(str(destination / "model.xml"))
     data = mujoco.MjData(model)
     mujoco.mj_fwdPosition(model, data)
-    assert model.neq == 2 and model.nv == 8 and model.nmesh == model.ngeom == 6
+    mesh_count = len(load_visuals(load_solver(name).mechanism)["bodies"])
+    assert model.neq == 2 and model.nv == 8 and model.nmesh == model.ngeom == mesh_count
     assert model.nu == 0
     assert np.max(np.abs(data.efc_pos)) < 1e-8
 

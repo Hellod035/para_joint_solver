@@ -1,43 +1,124 @@
-# Mechanism configuration
+# 机构配置说明
 
-`robots/<name>/mechanism.yaml` describes a dual-crank, two-rod mechanism with two
-rotational output joints. It contains the complete geometry needed for solving.
-All positions and directions are specified in **one mechanism base frame, at the
-reference pose**. STL files and mesh coordinate systems do not define this frame.
+`robots/<name>/mechanism.yaml` 描述由双曲柄、双连杆驱动的两自由度转动机构，
+包含解算所需的完整几何信息。所有位置和方向都采用**参考姿态下的同一个机构基坐标系**。
+这个基坐标系由机构几何基准确定，不由 STL 文件或网格坐标系决定。
 
-The solver provides `q_AB → q_RP`, `dq_AB → dq_RP`, and `tau_RP → tau_AB`.
-Public vector order is always `RP = [roll, pitch]` and `AB = [A, B]`.
-Lengths use metres, angles radians, angular velocities rad/s, and torques N·m.
+求解器提供 `q_AB → q_RP`、`dq_AB → dq_RP` 和 `tau_RP → tau_AB` 三种映射。
+接口向量顺序始终为 `RP = [roll, pitch]`、`AB = [A, B]`。
+长度单位为 m，角度为 rad，角速度为 rad/s，力矩为 N·m。
 
-## Coordinate convention
+## 坐标约定
 
-Choose a right-handed frame fixed to the base platform. A convenient origin is
-an output-axis intersection, or a mounting datum when the axes do not intersect.
-Use this same frame for **every** `position`, `axis`, `crank_tip`, and
-`platform_anchor` in the file.
+选择一个固定在基座平台上的右手坐标系。原点可取在输出轴交点；若两根轴不相交，
+也可选择便于测量的安装基准。文件中**所有** `position`、`axis`、`crank_tip`
+和 `platform_anchor` 都必须使用这个坐标系。
 
-`assembly.home_rp` and `assembly.motor_reference` specify the public joint readings
-at which those coordinates were measured. They need not be zero. At this pose:
+`assembly.home_rp` 和 `assembly.motor_reference` 指定测量这些几何坐标时的关节读数，
+它们可以非零。在这个参考姿态下：
 
-- `position` is a point on a joint's rotation axis, expressed in the base frame.
-- `axis` is the axis's unit direction in the base frame. Positive physical rotation
-  follows the right-hand rule.
-- `crank_tip` is the crank-to-rod attachment point in the base frame.
-- `platform_anchor` is the rod-to-output-platform attachment point in the base frame.
+- `position` 是转轴上一点的基坐标。
+- `axis` 是转轴在基坐标系中的单位方向，正物理转角遵循右手定则。
+- `crank_tip` 是曲柄与连杆连接中心的基坐标。
+- `platform_anchor` 是连杆与输出平台连接中心的基坐标。
 
-These are absolute reference coordinates, including for the second output joint.
-During motion, the first output joint carries the second joint and its axis;
-both joints move the platform anchors. The two motor axes remain fixed to the base.
-The two rods constrain the distance between each moving pair of attachment points.
+这些都是绝对参考坐标，第二个输出关节也不例外。运动时，第一个输出关节带动第二个
+关节及其转轴，两者共同带动平台连接点。两个电机轴始终固定在基座上，
+两根连杆分别约束各自两个运动连接点之间的距离。
 
-For example, if a motor is at `[0, 0.08, 0.02]` and its reference crank tip is at
-`[0.05, 0.08, 0.02]`, write those two points directly. The crank-tip field is the
-point `[0.05, 0.08, 0.02]`, with no subtraction of the motor position.
+例如，电机参考点为 `[0, 0.08, 0.02]`，曲柄端连接中心为 `[0.05, 0.08, 0.02]`，
+就直接填写这两个点。`crank_tip` 应为 `[0.05, 0.08, 0.02]`，无需减去电机位置。
 
-## Complete minimal example
+### position 和 axis 的物理含义
 
-This is the geometry of the supplied symmetric waist, with a new ID. Save it as
-`robots/my_robot/mechanism.yaml` to use the commands below.
+`motor.position` 是**电机转轴上的一个参考点在机构基坐标系中的坐标**，单位为米。
+通常选在输出轴或轴承中心，便于测量和装配；解算只要求这个点位于正确的转轴上。
+`motor.axis` 是**用同一个机构基坐标系表示的转轴单位方向**。两者共同确定一条轴线：
+
+```text
+轴线上任意一点 = position + λ × axis
+```
+
+其中 `λ` 是任意长度，单位为米。`position` 是绝对基坐标，不是相对于上一关节的位移；
+`axis` 也不是 STL 自身坐标系中的方向。STL 的原点和摆放方向由可视化配置另外确定。
+
+例如 [G1 的电机 A](../robots/g1/mechanism.yaml)：
+
+```yaml
+position: [0.035, 0.0, 0.15087]
+axis: [1.0, 0.0, 0.0]
+```
+
+表示转轴经过基坐标 `[35, 0, 150.87]` mm，沿基坐标 +X 方向。
+G1 示例的基坐标原点位于 pitch 转轴上；roll 轴与它有偏移。
+该支链的 `crank_tip: [0.035, 0.01653, 0.1469]` 是曲柄与连杆的连接中心，
+到这条电机轴线的垂直距离约为 17 mm，即曲柄半径。
+
+**沿轴线移动参考点，不会改变转轴或运动学解算结果。** 保持其余几何参数不变时，
+这个例子的 `position` 可以写成 `[0, 0, 0.15087]` 或 `[0.1, 0, 0.15087]`，
+它们与原配置描述同一条轴线。因此 `0.035` 不影响轴线位置，但仍确定了所选的
+装配参考点，以及可视化 `motor_A` 坐标系的原点。
+
+类似地，[天工电机 A](../robots/tiangong/mechanism.yaml) 的配置：
+
+```yaml
+position: [0.0, 0.04325, 0.215]
+axis: [0.0, 1.0, 0.0]
+```
+
+表示经过 `[0, 43.25, 215]` mm、沿基坐标 +Y 的轴线。这里沿轴方向可自由选取的是
+Y 分量；X、Z 决定轴线位置。对于倾斜轴，应沿整个 `axis` 向量移动参考点，
+不能任意修改某一个坐标分量。
+
+### axis 对 position 哪个分量不敏感
+
+下表中的“不影响”仅指：**保持其他几何参数不变，只移动轴上的参考点，轴线和解算结果不变**。
+
+| `motor.axis` | 可单独改变而不影响轴线的 `position` 分量 | 决定轴线位置的分量 |
+| --- | --- | --- |
+| `[1, 0, 0]` 或 `[-1, 0, 0]` | 第 1 位 X | 第 2、3 位 Y、Z |
+| `[0, 1, 0]` 或 `[0, -1, 0]` | 第 2 位 Y | 第 1、3 位 X、Z |
+| `[0, 0, 1]` 或 `[0, 0, -1]` | 第 3 位 Z | 第 1、2 位 X、Y |
+| 倾斜轴，至少两个方向分量非零 | 没有可以单独任意改变的一位；只能沿整个 `axis` 移动 | 由垂直于轴线的两个方向分量共同决定 |
+
+`axis` 中某一位为零，并不意味着 `position` 对应位无效。例如 `[1, 0, 0]` 的 Y、Z
+方向分量虽然为零，却恰恰是 `position` 的 Y、Z 决定这条轴线的位置。
+轴方向的正负不改变上述表格，但会改变正转方向。
+
+对于一般的单位轴向量 `a = axis`，令 `p = position`，轴线的位置取决于：
+
+```text
+p_perpendicular = p - dot(p, a) × a
+```
+
+这是参考点在垂直于轴方向的平面上的投影。将 `p` 替换为 `p + λ × a`，
+该投影不变。例如 `axis = [1/√2, 1/√2, 0]` 时，同时让 X、Y 增加 0.01 m
+仍在原轴线上；只让 X 增加 0.01 m，则会改变轴线位置。
+
+修改 `motor.position` 也会移动对应的可视化坐标原点。如果沿轴将它移动
+`λ × axis`，希望 STL 仍保持原装配位置，就需要将该网格的 `pose.xyz` 相应减去
+`λ × axis`，或重新选择 STL 导出原点。运动学中 `crank_tip`、`platform_anchor`
+仍保留原来的绝对基坐标。
+
+### 机构基坐标系与世界坐标系
+
+当前独立可视化中，机构基坐标系与世界坐标系重合，所以 `axis` 也等于显示中的世界方向。
+装到整台机器人上后，基座可能发生平移和旋转。设 `R_world_base` 将基坐标方向旋转到
+世界坐标，`t_world_base` 是基坐标原点的世界位置，则：
+
+```text
+axis_world     = R_world_base × axis
+position_world = R_world_base × position + t_world_base
+```
+
+`mechanism.yaml` 中的数值仍然相对于机构基座，不需要随整台机器人运动而修改。
+电机轴固定在机构基座上；输出关节的 `axis`、`position` 描述参考姿态，运动时第二根
+输出轴会随第一关节运动，程序会计算它的当前方向和位置。
+
+## 完整的最小示例
+
+下面采用仓库中对称腰部的几何参数，并使用新的示例标识。
+保存为 `robots/my_robot/mechanism.yaml` 后，即可运行下文的命令。
 
 ```yaml
 id: my_robot
@@ -72,200 +153,338 @@ assembly:
   motor_reference: [0, 0]
 ```
 
-Both output axes pass through `[0, 0, 0.185]`. Each crank has a 0.05 m radius;
-the distance from its tip to its platform anchor is 0.16 m at the reference pose.
-Swapping the order of the output joints changes the mechanism's motion, even
-though these reference coordinates remain the same.
+两根输出轴都经过 `[0, 0, 0.185]`。每个曲柄的半径为 0.05 m，参考姿态下曲柄端
+连接中心到平台连接中心的距离为 0.16 m。即使这些参考坐标不变，
+交换输出关节的排列顺序也会改变机构运动。
 
-## Every field
+## mechanism.yaml 各字段的物理含义
 
-### Top level
+下表覆盖当前配置格式支持的全部字段。所有 `[x, y, z]` 坐标都在同一个机构基坐标系中，
+对应同一个参考装配姿态；长度单位为 m，角度单位为 rad。
+向量元素的顺序必须保持：空间坐标为 XYZ，输出读数为 `[roll, pitch]`，电机读数为 `[A, B]`。
 
-| Field | Required / default | Meaning |
+### 顶层字段
+
+| 字段 | 必填 / 默认值 | 物理或配置含义 |
 | --- | --- | --- |
-| `id` | Required | Robot identifier shown in results. Use the robot directory name. |
-| `topology` | Required | `dual_crank_two_rod`, the supported topology. Different geometry within this topology needs only configuration and visual assets; a different linkage topology needs solver changes. |
-| `description` | Optional | Human-readable description; unused by the solver. |
-| `sources` | Optional | List of geometry reference URLs; unused by the solver. |
-| `output` | Required | Defines the two rotational output axes and their physical order. |
-| `branches` | Required | Exactly two branch mappings, `A` and `B`. |
-| `assembly` | Required | Joint readings at the geometric reference pose. |
+| `id` | 必填 | 示例标识，建议与机器人目录名一致，用于显示和结果标记，不是几何参数。 |
+| `topology` | 必填 | 机构连接形式，目前只支持 `dual_crank_two_rod`：两个电机分别驱动曲柄，经两根定长连杆约束具有两个转动自由度的输出平台。同拓扑下可更换几何参数；不同拓扑需要修改求解器。 |
+| `description` | 可选 | 描述模型用途、来源或简化假设的文字，不参与解算。 |
+| `sources` | 可选 | 几何参数的来源链接或来源记录列表，不参与解算。 |
+| `output` | 必填 | 描述输出平台的两个转动关节及其实际串接顺序。 |
+| `branches` | 必填 | 两条驱动支链，必须包含 `A`、`B`。字母只标识支链，不自动代表左右或上下。 |
+| `assembly` | 必填 | 指定上述几何坐标所对应的输出角度和电机角度读数。 |
 
 ### `output.joints`
 
-`output` contains a `joints` list with exactly two entries, named `roll` and
-`pitch`. Write them in physical order from the base toward the output platform.
-`[pitch, roll]` and `[roll, pitch]` are both supported. Public RP arrays remain
-`[roll, pitch]` for either order. The names identify coordinates; the `axis`
-vectors define their actual directions.
+`output` 只包含 `joints` 列表，列表必须有两个关节，分别命名为 `roll`、`pitch`。
+**列表顺序是从机构基座到输出平台的实际关节顺序**，可为 `[pitch, roll]` 或 `[roll, pitch]`；
+交换列表顺序会改变机构运动。接口中的 RP 向量始终为 `[roll, pitch]`，不随列表顺序改变。
 
-| Field in each joint | Required / default | Meaning |
+| 每个输出关节的字段 | 必填 / 默认值 | 物理含义 |
 | --- | --- | --- |
-| `name` | Required | `roll` or `pitch`, each appearing once. |
-| `position` | Required | Three coordinates of a point on this output axis in the base frame at the reference pose, in metres. |
-| `axis` | Required | Three components of its unit direction in the same reference frame. |
-| `scale` | Optional; `1` | Signed multiplier from a public angle change to a physical rotation. Negative values reverse the coordinate direction. Must be finite and nonzero. |
-| `limits` | Optional; no independent RP bound | `[lower, upper]` bounds on the public coordinate, in radians. Both values must be finite and increasing when supplied. |
+| `name` | 必填 | `roll` 或 `pitch`，各出现一次。标识接口角度分量；名字不会强制指定实际转轴，实际方向由 `axis` 决定。 |
+| `position` | 必填 | 参考姿态下转轴上一点的 `[x, y, z]` 基坐标，单位 m。第二个关节也使用绝对基坐标。它同时确定该关节可视化坐标系的参考原点。 |
+| `axis` | 必填 | 参考姿态下的单位转轴方向 `[ax, ay, az]`，用基坐标系表示，无量纲。每个分量表示沿对应基坐标轴的方向投影。正物理转角遵循右手定则。 |
+| `scale` | 可选，默认 `1` | 从接口角度变化换算到物理转角的有符号倍率，无量纲。`1` 为同向等角度，`-1` 为反向等角度；必须有限且非零。 |
+| `limits` | 可选，默认没有独立 RP 角度限位 | 接口角度的 `[下限, 上限]`，单位 rad。提供时必须有限且下限小于上限；省略它仍会受到闭环几何、电机限位和奇异位形的限制。 |
 
-For an output coordinate `q`, the physical rotation from the reference pose is:
+输出关节相对于参考姿态的物理转角为：
 
 ```text
 rotation = scale * (q - assembly.home_rp[coordinate_index])
 ```
 
-For example, a roll reference of `0.025`, scale `-1`, and requested roll `0.125`
-produce a physical rotation of `-0.1` rad about the configured axis. No separate
-zero-offset transform is needed: the points and axis directions already describe
-the reference pose.
+例如 roll 的参考读数为 `0.025`、`scale: -1`，请求 roll 为 `0.125` 时，
+相对于参考姿态绕所配置轴旋转 `-0.1` rad。这里的 `scale` 不缩放长度或 STL。
+`limits` 限制的是接口读数 `q`，而不是已换算后的物理转角。
 
-The output axes may be intersecting, separated, tilted, or expressed with negative
-directions. A valid reference assembly must still provide a nonsingular two-DOF map.
+两根输出轴可以相交、错位或倾斜，也可以使用负方向。第二根轴会随第一关节运动。
+参考装配仍需提供非奇异的两个自由度映射，才能正常解算。
 
-### `branches.A` and `branches.B`
+### `branches.A` 和 `branches.B`
 
-Each branch has exactly these four fields:
+每条支链均包含以下四个字段：
 
-| Field | Required / default | Meaning |
+| 字段 | 必填 / 默认值 | 物理含义 |
 | --- | --- | --- |
-| `motor` | Required | Rotation axis and coordinate settings for this branch's crank. |
-| `crank_tip` | Required | Reference crank-to-rod attachment point `[x, y, z]` in the base frame, in metres. |
-| `platform_anchor` | Required | Reference rod-to-platform attachment point `[x, y, z]` in the base frame, in metres. It is fixed to the moving output platform. |
-| `rod_length` | Required | Positive distance between the rod's attachment centres, in metres. It is independent of the STL's visible dimensions. |
+| `motor` | 必填 | 驱动该支链曲柄的转轴和角度约定。电机轴固定在机构基座上。 |
+| `crank_tip` | 必填 | 参考姿态下曲柄与连杆的连接中心 `[x, y, z]`，单位 m。是绝对基坐标；运动时随曲柄绕电机轴画圆。可视化标记为 `B_A` 或 `B_B`，这里 B 是连接点名称，不是电机 B。 |
+| `platform_anchor` | 必填 | 参考姿态下连杆与输出平台的连接中心 `[x, y, z]`，单位 m。也是绝对基坐标；该点固连在输出平台上，随输出关节运动。可视化标记为 `C_A` 或 `C_B`。 |
+| `rod_length` | 必填 | 两个连接中心之间的固定距离，必须为正，单位 m。应测量球铰或销轴的连接中心距，而不是 STL 外形的总长度。 |
 
-`motor` has the following fields. Its name is determined by the enclosing `A` or
-`B` key, so there is no nested motor `name` field.
+`motor` 内部的字段如下。电机名称由所属的 `A`、`B` 决定，不能另加一个 `name` 字段。
 
-| Field in `motor` | Required / default | Meaning |
+| `motor` 内的字段 | 必填 / 默认值 | 物理含义 |
 | --- | --- | --- |
-| `position` | Required | A point on the fixed motor axis, normally its shaft centre, in base coordinates and metres. |
-| `axis` | Required | Unit direction of the motor axis in the base frame. |
-| `scale` | Optional; `1` | Signed multiplier from the public AB coordinate change to crank rotation. Must be finite and nonzero. |
-| `limits` | Required | Increasing finite `[lower, upper]` bounds for that public A or B angle, in radians. |
+| `position` | 必填 | 固定转轴上一个参考点的 `[x, y, z]` 基坐标，单位 m，通常选输出轴或轴承中心。沿转轴移动该点不影响轴线，但会移动 `motor_A/B` 可视化坐标原点。 |
+| `axis` | 必填 | 固定转轴的单位方向 `[ax, ay, az]`，用机构基坐标系表示，无量纲。不是 STL 的装配旋转。详见前文“axis 对 position 哪个分量不敏感”。 |
+| `scale` | 可选，默认 `1` | 从 A 或 B 的接口角度变化换算为曲柄物理转角的有符号倍率，必须有限且非零。`-1` 表示读数增大时曲柄绕 `axis` 负转。 |
+| `limits` | 必填 | 该电机接口读数的 `[下限, 上限]`，单位 rad，必须有限且递增。限制电机角度行程，不是曲柄端点的 XYZ 范围。 |
 
-The crank's rotation from the reference pose is:
+曲柄相对于参考姿态的物理转角为：
 
 ```text
 rotation_A = scale_A * (q_A - assembly.motor_reference[0])
 rotation_B = scale_B * (q_B - assembly.motor_reference[1])
 ```
 
-The crank radius is determined by the axis line and reference tip:
+曲柄半径是连接中心 `crank_tip` 到电机轴线的垂直距离，可由已有参数算出：
 
 ```text
 crank_radius = norm(cross(motor.axis, crank_tip - motor.position))
 ```
 
-It must be nonzero. A tip may also have displacement along the motor axis, so its
-distance to `motor.position` is not always the crank radius. Specifying a separate
-radius would duplicate geometry already fixed by the axis and point.
+半径必须非零。`crank_tip` 相对于所选 `motor.position` 还可能有沿轴方向的偏移，
+因此两点间的直线距离不一定等于曲柄半径。无需额外配置一个重复的半径参数。
 
-At the reference pose, each branch must satisfy:
+每条支链在参考姿态下应满足：
 
 ```text
 norm(platform_anchor - crank_tip) = rod_length
 ```
 
-The loader accepts an absolute difference up to `5e-4` m (0.5 mm). This only sets
-the configuration check tolerance; the solver still checks the reference assembly
-and uses a `1e-9` m closure tolerance. During motion, it enforces the distance
-constraint using the moving attachment points.
+加载配置时，上式的绝对差不能超过 `5e-4` m（0.5 mm）。这只是输入配置的检查容差；
+求解器还会检查参考装配，使用 `1e-9` m 的闭环容差。运动时约束的是两个当前连接点之间
+的距离。误差容许值不代表可以随意调整杆长来弥补错误的坐标系。
 
 ### `assembly`
 
-| Field | Required / default | Meaning |
+| 字段 | 必填 / 默认值 | 物理含义 |
 | --- | --- | --- |
-| `home_rp` | Required | `[roll, pitch]` public angles at which all reference geometry is specified. Also the default FK seed and the inspector's home pose. |
-| `motor_reference` | Required | `[A, B]` public motor readings at that same pose. The explicit reference crank tips select the crank assembly branches. |
+| `home_rp` | 必填 | 参考装配姿态下的输出角度读数 `[roll, pitch]`，单位 rad。顺序固定，与 `output.joints` 的排列顺序无关；也是默认正解初值和网页 Reset Home 的目标输出姿态。 |
+| `motor_reference` | 必填 | 同一参考装配姿态下的电机角度读数 `[A, B]`，单位 rad。与 `crank_tip` 一起描述曲柄的参考装配分支；它是角度读数，不是电机轴心的位置。 |
 
-Both vectors must contain two finite values and lie within any configured limits.
-Changing these readings alone relabels the same geometric reference pose. To use
-a different physical reference pose, update the output axis lines and attachment
-points to their positions at that pose as well.
+两组读数必须各有两个有限数值，且落在对应的已配置角度限位内。它们不必为零。
+例如 `motor_reference[0] = 0.2` 表示：当电机 A 的接口读数为 `0.2` rad 时，
+曲柄端点正位于配置的 `branches.A.crank_tip`。它不会把转轴或连接点额外平移。
 
-All geometric numbers must be finite. Axis vectors must have unit length; the
-loader checks them rather than silently normalizing them. Unknown fields are rejected.
-The schema has no `version`, `units`, mass, inertia, `origin`, `offset`, or `tool` fields.
+只改参考读数，是给同一个几何姿态重新标记角度。如果要换成另一个实际装配姿态作为参考，
+还需同步更新该姿态下的输出轴线和连接点坐标，按需更新 STL 的参考摆放。
 
-## Limits and coordinate-dependent torques
+所有几何数值都必须有限；`axis` 必须是单位向量，程序检查后使用，不会自动替你归一化。
+未知字段会被拒绝。当前格式没有 `version`、`units`、质量、惯量、`origin`、`offset`
+或 `tool` 字段。STL 平移、旋转、缩放属于 `visuals.yaml`，不应添加到机构几何字段中。
 
-AB bounds constrain motor travel. Optional RP bounds add independent restrictions
-on the output coordinates. The reachable RP set also depends on the linkage,
-assembly branch, singularities, and both AB bounds; two independent RP intervals
-do not describe that coupled set.
+## 角度限位与广义力矩
 
-The inspector keeps slider bounds fixed and shows a gray feasible interval that
-changes with the other angle. Dragging stops at that interval's boundary.
-`visuals.yaml` inspection ranges select display and benchmark samples; they do not
-change the mechanism's joint limits. Choose benchmark ranges inside a reachable
-region, leaving room for the small perturbations used by finite-difference checks.
+AB 限位约束电机行程，可选的 RP 限位为输出角度增加独立限制。
+实际可达的 RP 范围还取决于连杆几何、装配分支、奇异位形和两个电机的限位，
+因此两个独立的 RP 角度区间不能完整描述这个耦合可达范围。
 
-Velocity and torque vectors use the same public coordinates as the angles,
-including `scale`. RP torques are generalized torques conjugate to `[roll, pitch]`,
-rather than three-dimensional moments expressed in the base frame. The mapping
-uses virtual power and requires no mass or inertia parameters.
+网页中的滑块总范围保持固定，灰色可行区间随另一个角度变化，拖动时会停在可行区间边界。
+`visuals.yaml` 中的检查范围用于显示和基准测试采样，不改变机构的关节限位。
+基准测试范围应位于可达区域内，并为有限差分检查所需的小扰动留出余量。
 
-## Mesh alignment belongs in `visuals.yaml`
+速度、力矩向量与角度使用相同的接口坐标约定，包括 `scale` 的影响。
+RP 力矩是与 `[roll, pitch]` 对应的广义力矩，并非基坐标系中的三维力矩向量。
+映射依据虚功率关系计算，不需要质量或惯量参数。
 
-The mechanism frame is determined by geometric datums. Exported STL origins,
-mesh orientations, and mesh unit conversion are specified through a visual body's
-`pose` and `scale`. Changing them does not change joint axes, rod constraints, or
-the three requested solver maps.
+## 在 visuals.yaml 中配置网格装配
 
-The six visual parts attach to these frames:
+机构坐标系由几何基准确定。导出 STL 的原点、网格朝向和单位换算通过可视化对象的
+`pose`、`scale` 配置。修改这些显示参数不会改变关节轴线、连杆约束或三种解算映射。
 
-| Visual `frame` | Frame definition at the reference pose |
-| --- | --- |
-| `base` | The chosen mechanism base frame. |
-| `platform` | Origin at the second output joint's `position`; axes parallel to the base axes. |
-| `motor_A`, `motor_B` | Origin at the corresponding motor's `position`; axes parallel to the base axes. |
-| `rod_A`, `rod_B` | Origin at `crank_tip`; local +Z points toward `platform_anchor`. |
+各可视化零件挂载到下列坐标系。表中定义均对应 `assembly.home_rp`
+和 `assembly.motor_reference` 指定的参考姿态。
 
-The optional `roll` and `pitch` visual frames likewise start at their own
-`position`, with axes parallel to the base at reference. These frames follow
-their respective joints during motion. The rod reference Y axis is the normalized
-cross product of Z with base X (base Y is used when `abs(Z.x) >= 0.8`), and X is
-`Y × Z`. This fixes rod mesh alignment without consulting an STL.
+| 可视化 `frame` | 原点在机构基坐标系中的位置 | 参考姿态下的 XYZ 朝向 |
+| --- | --- | --- |
+| `base` | 机构基坐标原点 `[0, 0, 0]` | 与机构基坐标系同向 |
+| `motor_A` | `branches.A.motor.position` | 与机构基坐标系同向 |
+| `motor_B` | `branches.B.motor.position` | 与机构基坐标系同向 |
+| `platform` | `output.joints` 最后一个关节的 `position` | 与机构基坐标系同向 |
+| `roll`、`pitch` | 对应输出关节的 `position` | 与机构基坐标系同向 |
+| `rod_A`、`rod_B` | 对应支链的 `crank_tip` | +Z 指向 `platform_anchor`；X、Y 见下文连杆规则 |
 
-For a mesh body, placement follows:
+运动时，这些坐标系随各自零件变化；参考姿态下同向，不意味着运动过程中始终与基座同向。
+
+网格顶点相对于挂载坐标系的位置按下式计算：
 
 ```text
 point_in_attached_frame = R(pose.quat_wxyz) * (scale * mesh_vertex) + pose.xyz
 ```
 
-`scale` acts componentwise and defaults to `[1, 1, 1]`; `pose.xyz` defaults to zero,
-and `pose.quat_wxyz` to the identity `[1, 0, 0, 0]`. The quaternion must be unit length.
-For an STL exported in millimetres, use visual scale `[0.001, 0.001, 0.001]`.
-For an STL exported in base coordinates at reference, its placement is the inverse
-of the attached frame's reference transform. For example, a base-aligned platform
-STL attaches using translation `-second_output_joint.position`.
+`scale` 逐分量缩放，默认为 `[1, 1, 1]`；`pose.xyz` 默认为零，
+`pose.quat_wxyz` 默认为表示零旋转的 `[1, 0, 0, 0]`，四元数必须为单位长度。
+如果 STL 的顶点数值以毫米为单位，应设置 `scale: [0.001, 0.001, 0.001]`。
+如果 STL 按参考姿态下的基坐标导出，则装配变换应取挂载坐标系参考变换的逆。
+例如，按基坐标导出的输出平台 STL，应设置平移量 `-second_output_joint.position`。
 
-## Add and check a robot
+### motor_A 的装配位置和旋转
 
-1. Choose a base frame and a valid reference assembly. Record all axis lines,
-   attachment points, rod lengths, joint readings, and known limits in that frame.
-2. Create `robots/<name>/mechanism.yaml` following the example. Start with unit
-   scales unless your public coordinates need a direction or transmission conversion.
-3. Check the geometry before adding meshes:
+对于 `frame: motor_A` 的网格，`motor.position` 决定挂载坐标系的原点。
+在参考电机读数下，`motor_A` 的 XYZ 与机构基坐标系同向。随后，整个挂载坐标系围绕
+经过 `motor.position`、方向为 `motor.axis` 的轴线转动，转角为：
+
+```text
+θ = motor.scale × (q_A - assembly.motor_reference[0])
+```
+
+`axis` 规定转轴方向，不会自动把 STL 的某根坐标轴对齐到它。
+例如 `axis: [0, -1, 0]` 不要求将 STL 初始坐标系翻转；它改变的是正转的物理方向。
+
+`visuals.yaml` 的 `pose` 指定 STL 相对于挂载坐标系的额外装配位置、朝向。
+设 `p = motor.position`、`v_stl` 为 STL 顶点，其在机构基坐标系中的位置为：
+
+```text
+v_base = p + R(axis, θ) × (pose.xyz + R(pose.quat_wxyz) × (scale × v_stl))
+```
+
+公式内的 `scale` 是网格的逐分量缩放；`motor.scale` 则是角度换算，两者用途不同。
+省略 `pose` 和网格 `scale` 时，上式简化为 `v_base = p + R(axis, θ) × v_stl`。
+`motor_B` 的规则相同，使用电机 B 的参数与参考读数。
+
+`motor_A/B` 上的网格会随输出轴转动，适合曲柄等转动件。固定在机构基座上的电机外壳
+应挂在 `base`；一个 frame 可以挂载多个网格。
+
+### 省略 pose 和 scale 的 STL 导出要求
+
+如果希望 `visuals.yaml` 只填写 `frame`、`type: mesh` 和 `file`，
+**导出的 STL 坐标系必须与上表中的挂载坐标系完全一致**。
+
+1. 在 `assembly.home_rp`、`assembly.motor_reference` 对应的参考姿态下装配模型。
+   参考读数可以非零，不应一律按电机读数为零时的姿态导出。
+2. 分别按上表选择各零件的导出原点。基座、电机 A、电机 B、输出平台及中间关节的
+   XYZ 朝向与机构基坐标系同向，但它们的原点通常不同。
+3. 为每根连杆建立下文规定的局部坐标系，连杆不能直接套用基座的 XYZ 朝向。
+4. 让导出器将顶点转换到各自的局部坐标系。STL 不单独保存一个可编辑的坐标系对象，
+   实际生效的是文件中的顶点坐标。只在 CAD 中画出坐标轴、仍按全局坐标导出，不能实现此要求。
+5. 使用右手坐标系，导出数值以米为单位。例如 100 mm 的长度应写成 `0.1`。
+   STL 本身没有可靠的单位声明；若导出数值仍是毫米，就需要配置 `scale: [0.001, 0.001, 0.001]`。
+
+例如 [IGRIS-C 腰部](../robots/igris_c_waist/mechanism.yaml) 的四个导出原点为：
+
+| frame | 导出原点在基坐标系中的位置，单位 m | XYZ 朝向 |
+| --- | --- | --- |
+| `base` | `[0, 0, 0]` | 与基坐标系同向 |
+| `motor_A` | `[0, 0.0905, 0]` | 与基坐标系同向 |
+| `motor_B` | `[0, -0.0905, 0]` | 与基坐标系同向 |
+| `platform` | `[0, 0, 0.04]`，即第二个输出关节 roll 的参考点 | 与基坐标系同向 |
+
+对这些朝向与基座一致的零件，导出顶点坐标就是“参考姿态下的基坐标减去该零件的导出原点”。
+例如输出平台上的基坐标点 `[0.02, 0, 0.06]`，在其 STL 中应为 `[0.02, 0, 0.02]`。
+当前 [IGRIS-C 可视化配置](../robots/igris_c_waist/visuals.yaml) 就省略了额外的 `pose` 和 `scale`。
+
+### 连杆绕 Z 的朝向是什么意思
+
+把连杆想象成一根笔：笔尖方向确定后，笔仍然能绕自身轴线转动。
+同样，只规定连杆 +Z 沿杆长方向，还不能确定横截面上的 X、Y 朝向。
+绕 Z 的角度会影响带有扁平面、耳板等结构的 STL 的装配外观。
+
+程序在参考姿态下，用以下规则唯一确定连杆坐标系；所有向量均用机构基坐标系表示：
+
+```text
+O = crank_tip
+Z = normalize(platform_anchor - crank_tip)
+
+H = [1, 0, 0]                # Use base +X as the default reference.
+if abs(Z.x) >= 0.8:
+    H = [0, 1, 0]            # Use base +Y when the rod is near the X direction.
+
+Y = normalize(Z × H)
+X = Y × Z
+```
+
+`×` 在此表示叉积。直观上，局部 X 是参考方向 H 在垂直于杆长方向的平面上的投影方向；
+局部 Y 由右手规则补齐。这个辅助方向切换规则用于建立参考坐标系，运动时不会重新按
+当前杆方向切换 H，而是由被动关节带动连杆网格。
+
+在杆长与连接中心距离一致的参考装配中，导出后两个连接中心应为：
+
+```text
+曲柄端连接中心：[0, 0, 0]
+平台端连接中心：[0, 0, rod_length]
+```
+
+设 `R = [X Y Z]`（三个方向向量作为列），把参考姿态下的基坐标顶点转换为连杆 STL
+局部坐标的公式为 `v_stl = Rᵀ × (v_base - O)`。
+
+“前、右、上”不是程序固定的命名。如果局部 +Z 恰好等于基坐标 +Z，上述规则会得到
+与基坐标完全同向的 XYZ。如果约定 X 向前、Z 向上，那么右手系的 Y 应向左；
+X 向前、Y 向右则要求 Z 向下。
+
+导出后可在网页点击 **Reset Home**，同时打开机构基坐标轴和各 STL 自身坐标系，
+检查上表中的原点与朝向，再打开 `crank_tip`、`platform_anchor` 参数标记核对连接中心。
+
+## LimX 腰部示例
+
+`limx_waist` 使用 LimX 官方 `humanoid-description` 中 HU_D04_01 的腰部几何，
+固定来源版本为 `a90f734c153aa3ecffc8b674af1e0a323cb55d1a`。
+六个原始 STL 保存在示例目录中，中间转动件不显示，但对应输出关节仍参与解算。原始 MJCF 副本保存在
+`tests/fixtures/limx_hu_d04_01.xml`。运行示例和测试都不需要 `external/` 目录。
+来源文件及许可证见 [NOTICE](../robots/limx_waist/NOTICE) 和
+[上游许可证原文](../robots/limx_waist/LICENSE)。
+
+官方模型的两个腰部电机位于上部 `waist_pitch_link`。本求解器要求电机轴固定在机构基座上，
+因此选择上躯干为固定基座，让下部 `waist_yaw_link` 相对运动，并排除独立 yaw 自由度。
+基坐标原点取在 pitch、roll 两轴的交点，参考朝向与官方上躯干坐标系一致。
+
+官方下部到上部的转动顺序为 roll → pitch；反向固定后，需要将顺序和轴方向一起反转：
+
+```text
+R_upper_in_lower = Rx(roll) * Ry(pitch)
+R_lower_in_upper = Ry(-pitch) * Rx(-roll)
+```
+
+因此 `output.joints` 按 **pitch、roll** 排列，方向分别为 **-Y、-X**。
+接口 `q_rp` 仍按 `[roll, pitch]` 排列，数值直接对应官方同名关节读数。
+`q_ab` 按 `[waist_A_joint, waist_B_joint]` 排列。官方 MJCF 的腰部电机执行器顺序是
+**B、A**，从数组读取数据时需要按关节名称重排。
+
+下部连接点的原始坐标 `[0.0639, ±0.06, 0.0337]` 位于官方 yaw-link 坐标系。
+减去 roll 原点偏移 `[0, 0, 0.057]`，得到本例参考基坐标中的
+`platform_anchor: [0.0639, ±0.06, -0.0233]`。
+模型给出的精确连接中心距为 `0.06404300000780726` m，配置保留此数值，
+不将它取整为 0.064 m。两组装配参考读数均为零，没有叠加 SDK 的角度标定偏移。
+
+STL 保留原始顶点坐标，通过 `visuals.yaml` 中的装配变换挂载：
+
+| 挂载 frame | 官方 STL | 装配说明 |
+| --- | --- | --- |
+| `base` | `waist_pitch_link.STL` | 固定上躯干，与机构基坐标系重合 |
+| `platform` | `waist_yaw_link.STL` | 原始 STL 原点位于轴交点下方 0.057 m，需配置该平移 |
+| `motor_A`、`motor_B` | `waist_A_link.STL`、`waist_B_link.STL` | 原始坐标原点就是电机轴参考点 |
+| `rod_A`、`rod_B` | `waist_A_rod_link.STL`、`waist_B_rod_link.STL` | 用四元数补偿本求解器的连杆参考坐标方向 |
+
+连杆四元数含有很小的倾斜分量，不应直接取整为 `[0, 1, 0, 0]`，否则原始 STL 坐标系
+和连接中心会发生偏差。官方连杆采用球关节，轴向自转不受闭环约束；
+本项目用万向关节固定这一自由自转，仅比较运动学，不推断真实动力学参数。
+
+`tests/test_limx.py` 从原始 MJCF 独立截取下部固定的腰部，检查轴线、角度限位、
+连接中心、正逆解、雅可比矩阵、速度与力矩映射，并在非零姿态下核对 STL 坐标系。
+这验证的是模型几何适配，不代表与 LimX SDK 解算程序或实机标定结果一致。
+
+```bash
+uv run pjs inspect limx_waist
+uv run pjs validate --robot limx_waist
+uv run pjs solve limx_waist --q-rp 0.1 -0.15 --dq-ab 0.2 -0.1 --tau-rp 8 -3
+```
+
+## 新增并验证机构
+
+1. 选择机构基坐标系和有效的参考装配姿态，在该坐标系中记录所有轴线、连接点、
+   杆长、关节读数和已知限位。
+2. 参照示例创建 `robots/<name>/mechanism.yaml`。通常先使用 `scale: 1`，
+   只有接口坐标需要方向或传动倍率换算时才修改它。
+3. 添加网格之前先检查几何解算：
 
    ```bash
    uv run pjs solve my_robot --q-rp 0 0 --dq-ab 0.1 -0.1 --tau-rp 1 1
    uv run pjs validate --robot my_robot --core-only
    ```
 
-   Replace `0 0` with the configured `home_rp` when it is nonzero. Without
-   `visuals.yaml`, validation samples home ±0.1 rad, clipped by optional RP limits.
-4. Add the six meshes and `visuals.yaml`. Use `pose` to align each mesh to its
-   mechanism frame. Set finite `inspection.roll` and `inspection.pitch` ranges
-   whose sampled combinations are reachable.
-5. Check the independent MuJoCo geometry and inspect the result:
+   如果 `home_rp` 非零，将命令中的 `0 0` 替换为配置的参考读数。
+   没有 `visuals.yaml` 时，验证范围为参考输出角度 ±0.1 rad，并按已配置的 RP 限位裁剪。
+4. 添加所需的零件网格和 `visuals.yaml`，按需使用 `pose` 将每个网格对齐到对应机构坐标系。
+   为 `inspection.roll` 和 `inspection.pitch` 设置有限范围，使采样组合位于可达区域内。
+5. 使用独立的 MuJoCo 几何计算进行验证，并查看可视化结果：
 
    ```bash
    uv run pjs benchmark --robot my_robot --plot
    uv run pjs inspect my_robot
    ```
 
-For a complete visual setup, see [the symmetric waist](../robots/waist_symmetric/visuals.yaml).
-The [offset waist](../robots/waist_offset/mechanism.yaml) shows separated output
-axes, nonzero reference readings, and signed scales. Its
-[visual configuration](../robots/waist_offset/visuals.yaml) keeps mesh alignment
-separate from the mechanism geometry.
+完整的可视化配置可参考[对称腰部](../robots/waist_symmetric/visuals.yaml)。
+[偏置腰部](../robots/waist_offset/mechanism.yaml) 展示了错位输出轴、非零参考读数和
+有符号倍率；它的[可视化配置](../robots/waist_offset/visuals.yaml) 将网格装配与机构几何分开设置。

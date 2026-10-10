@@ -1,0 +1,38 @@
+id: limx_waist
+topology: dual_crank_two_rod
+description: >-
+  基于 LimX 官方 HU_D04_01 MJCF 的两自由度腰部，排除独立 yaw。
+  以上部 waist_pitch_link 为固定基座，下部 waist_yaw_link 相对运动。
+  反向排列 pitch、roll 轴以保留官方关节读数；采用模型几何和零位，未应用 SDK 标定偏移。
+sources:
+  - https://github.com/limxdynamics/humanoid-description/blob/a90f734c153aa3ecffc8b674af1e0a323cb55d1a/HU_D04_description/xml/HU_D04_01.xml
+output:
+  joints:
+  - name: pitch
+    position: [0.0, 0.0, 0.0]
+    axis: [0.0, -1.0, 0.0]
+    limits: [-0.524, 0.785]
+  - name: roll
+    position: [0.0, 0.0, 0.0]
+    axis: [-1.0, 0.0, 0.0]
+    limits: [-0.524, 0.524]
+branches:
+  A:
+    motor:
+      position: [0.0, 0.0934, 0.064]
+      axis: [0.0, 1.0, 0.0]
+      limits: [-0.785, 0.524]
+    crank_tip: [0.063899, 0.06, 0.040743]
+    platform_anchor: [0.0639, 0.06, -0.0233]
+    rod_length: 0.06404300000780726
+  B:
+    motor:
+      position: [0.0, -0.0934, 0.064]
+      axis: [0.0, 1.0, 0.0]
+      limits: [-0.785, 0.524]
+    crank_tip: [0.063899, -0.06, 0.040743]
+    platform_anchor: [0.0639, -0.06, -0.0233]
+    rod_length: 0.06404300000780726
+assembly:
+  home_rp: [0.0, 0.0]
+  motor_reference: [0.0, 0.0]

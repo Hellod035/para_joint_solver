@@ -1,5 +1,4 @@
 from copy import deepcopy
-from pathlib import Path
 import shutil
 
 import numpy as np
@@ -215,8 +214,7 @@ def test_example_assets_are_self_contained():
     for name in ROBOTS:
         solver = load_solver(name)
         mesh_bodies = [b for b in load_visuals(solver.mechanism)["bodies"] if b["type"] == "mesh"]
-        assert len(mesh_bodies) == 6
-        assert {b["frame"] for b in mesh_bodies} == {
+        required_frames = {
             "base",
             "platform",
             "motor_A",
@@ -224,14 +222,10 @@ def test_example_assets_are_self_contained():
             "rod_A",
             "rod_B",
         }
-        assert {Path(b["file"]).stem for b in mesh_bodies} == {
-            "base_platform",
-            "output_platform",
-            "crank_A",
-            "crank_B",
-            "rod_A",
-            "rod_B",
-        }
+        frames = {b["frame"] for b in mesh_bodies}
+        # An intermediate gimbal may have its own mesh and source filename.
+        assert required_frames <= frames <= required_frames | {"roll", "pitch"}
+        assert len({b["file"] for b in mesh_bodies}) == len(mesh_bodies)
         for b in mesh_bodies:
             assert (solver.mechanism.directory / b["file"]).stat().st_size > 100
         assert not list(solver.mechanism.directory.glob("**/SOURCES.json"))
