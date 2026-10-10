@@ -98,6 +98,7 @@ class Mechanism:
     motor_reference: np.ndarray
     tolerance: float
     max_condition: float
+    source_yaml: str | None = None
 
     @property
     def rp_limits(self):
@@ -132,7 +133,8 @@ def load_mechanism(robot, root=None):
         mechanism_path = directory / "mechanism.yaml"
     directory = directory.resolve()
     try:
-        data = yaml.safe_load(mechanism_path.read_text())
+        source_yaml = mechanism_path.read_text()
+        data = yaml.safe_load(source_yaml)
     except (OSError, yaml.YAMLError) as exc:
         raise ConfigurationError(f"Cannot load robot at {directory}: {exc}") from exc
     keys(
@@ -207,4 +209,5 @@ def load_mechanism(robot, root=None):
         reference,
         1e-9,
         1e5,
+        source_yaml,
     )

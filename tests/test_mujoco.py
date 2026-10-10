@@ -143,3 +143,87 @@ def test_export_is_portable_with_meshes(name, tmp_path):
     assert model.neq == 2 and model.nv == 8 and model.nmesh == model.ngeom == 6
     assert model.nu == 0
     assert np.max(np.abs(data.efc_pos)) < 1e-8
+
+
+def test_stl_axes_follow_source_frame_with_visual_pose_and_scale(calibrated_robot):
+    from scipy.spatial.transform import Rotation
+    from para_joint_solver.visualization.annotations import Annotations
+
+    path = calibrated_robot / "visuals.yaml"
+    visual = yaml.safe_load(path.read_text())
+    rotation = Rotation.from_euler("xyz", [0.3, -0.4, 0.2]).as_matrix()
+    quaternion = Rotation.from_matrix(rotation).as_quat(scalar_first=True).tolist()
+    offset = np.array([0.035, -0.023, 0.012])
+    for body in visual["bodies"]:
+        body["pose"] = dict(xyz=offset.tolist(), quat_wxyz=quaternion)
+        body["scale"] = [0.8, 1.2, 0.7]
+    path.write_text(yaml.safe_dump(visual))
+    solver = load_solver(calibrated_robot)
+    engine = MujocoBackend(solver, visual=True)
+    annotations = Annotations(engine)
+    transform = np.eye(4)
+    transform[:3, :3], transform[:3, 3] = rotation, offset
+    for q in (solver.mechanism.home_rp, [0.075, -0.08]):
+        state = solver.at_pose(q)
+        engine.set_configuration(state.q_rp, state.q_ab, close_rods=True)
+        *_, frames = solver.geometry(state.q_rp, state.q_ab)
+        for mesh in annotations.meshes:
+            if mesh["frame"] not in frames:
+                continue  # Passive rod rotations are tested separately below.
+            actual = annotations.mesh_transform(mesh)
+            expected = frames[mesh["frame"]] @ transform
+            np.testing.assert_allclose(actual, expected, atol=1e-12)
+            # MuJoCo's compiled mesh geom has a different origin after centering.
+            assert not np.allclose(actual[:3, 3], engine.data.geom_xpos[int(mesh["id"])])
+
+
+def test_rod_stl_axes_use_passive_body_frame():
+    from para_joint_solver.core.geometry import align_z
+    from para_joint_solver.visualization.annotations import Annotations
+
+    solver = load_solver("igris_c_waist")
+    engine = MujocoBackend(solver, visual=True)
+    annotations = Annotations(engine)
+    for q in (solver.mechanism.home_rp, [0.04, -0.07]):
+        state = solver.at_pose(q)
+        engine.set_configuration(state.q_rp, state.q_ab, close_rods=True)
+        b, c, *_ = solver.geometry(state.q_rp, state.q_ab)
+        for i, name in enumerate(("A", "B")):
+            mesh = next(m for m in annotations.meshes if m["frame"] == f"rod_{name}")
+            frame = annotations.mesh_transform(mesh)
+            np.testing.assert_allclose(frame[:3, 3], b[i], atol=1e-12)
+            np.testing.assert_allclose(frame[:3, 2], (c[i] - b[i]) / np.linalg.norm(c[i] - b[i]),
+                                       atol=1e-12)
+            if np.array_equal(q, solver.mechanism.home_rp):
+                np.testing.assert_allclose(frame[:3, :3], align_z(c[i] - b[i]), atol=1e-12)
+
+
+@pytest.mark.parametrize("name", ["tiangong", "waist_offset"])
+def test_reference_markers_coincide_with_engine_joint_axes(name):
+    from para_joint_solver.visualization.annotations import Annotations
+
+    solver = load_solver(name)
+    m = solver.mechanism
+    engine = MujocoBackend(solver, visual=True)
+    engine.set_configuration(m.home_rp, m.motor_reference, close_rods=True)
+    annotations = Annotations(engine)
+    paths = [f"output.joints[{i}]" for i in range(2)] + [f"branches.{n}.motor" for n in "AB"]
+    options = annotations.settings(dict(
+        base_axes=False,
+        parameters=[f"{path}.{field}" for path in paths for field in ("position", "axis")]
+                   + ["assembly.home_rp", "assembly.motor_reference"],
+    ))
+    scene = mujoco.MjvScene(engine.model, maxgeom=200)
+    labels, _ = annotations.draw(scene, 0.04, options)
+    for joint in (*m.output, *(b.motor for b in m.branches)):
+        engine_name = f"motor_{joint.name}" if joint.name in "AB" else joint.name
+        idx = engine.model.joint(engine_name).id
+        anchor, axis = engine.data.xanchor[idx], engine.data.xaxis[idx]
+        refs = [position for position, text, *_ in labels if text.startswith(f"{joint.name} ref")]
+        assert len(refs) == 3  # Position, axis reference, and assembly reading.
+        for position in refs:
+            np.testing.assert_allclose(position, anchor, atol=1e-12)
+        tip = next(position for position, text, *_ in labels
+                   if text.startswith(f"{joint.name} axis="))
+        np.testing.assert_allclose(np.cross(tip - anchor, axis), 0, atol=1e-12)
+        assert np.dot(tip - anchor, axis) > 0

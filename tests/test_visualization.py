@@ -127,3 +127,131 @@ def test_rp_slider_endpoints_remain_reachable_when_axes_are_combined(name):
             assert all(limit["status"] != "outside" for limit in data["limits"]["ab"])
     finally:
         inspector.renderer.close()
+
+
+def test_annotations_change_only_rendering_and_preserve_the_last_valid_state():
+    from para_joint_solver.visualization.inspector import Inspector
+
+    inspector = Inspector(load_solver("igris_c_waist"))
+    try:
+        assert inspector.annotations.options["parameters"] == []
+        data = inspector.update(dict(mode="rp", q=[0.04, -0.07]))
+        before = inspector.state
+        rgba = inspector.engine.model.geom_rgba.copy()
+        baseline = inspector.render(overlays=dict(base_axes=False, stl_frames=[],
+                                                 geometry=False, transparent=False))
+        counts = [inspector.renderer.scene.ngeom]
+        for settings in (
+            dict(base_axes=True),
+            dict(stl_frames=[mesh["id"] for mesh in inspector.annotations.meshes]),
+            dict(geometry=True, transparent=True, parameters=["branches.A.platform_anchor"]),
+        ):
+            rendered = inspector.render(overlays=settings)
+            assert rendered["image"] != baseline["image"]
+            assert inspector.state is before
+            assert inspector.engine.rod_gaps().max() < 1e-9
+            counts.append(inspector.renderer.scene.ngeom)
+        assert all(count > counts[0] for count in counts[1:])
+        np.testing.assert_array_equal(inspector.engine.model.geom_rgba, rgba)
+        options = inspector.annotations.options.copy()
+        for invalid in ({"stl_frames": ["missing"]}, {"stl_frames": "all"},
+                        {"base_axes": "yes"},
+                        {"parameters": ["bad.field"]}, {"parameters": "bad.field"},
+                        {"unknown": True}):
+            with pytest.raises(ValueError):
+                inspector.render(overlays=invalid)
+            assert inspector.annotations.options == options
+        with pytest.raises(LimitViolation):
+            inspector.update(dict(mode="ab", q=[100, 100]))
+        inspector.render(overlays=dict(stl_frames=["0"], parameters=["output.joints[0].axis"]))
+        assert inspector.state is before
+        np.testing.assert_array_equal(before.q_rp, data["q_rp"])
+    finally:
+        inspector.renderer.close()
+
+
+def test_parameter_values_stay_on_reference_geometry_while_stl_frames_move():
+    from para_joint_solver.visualization.inspector import Inspector
+
+    inspector = Inspector(load_solver("waist_offset"))
+    try:
+        annotations = inspector.annotations
+        options = dict(base_axes=False, stl_frames=[], geometry=False, transparent=False)
+        snapshots = []
+        for q in (inspector.solver.mechanism.home_rp, [0.07, -0.08]):
+            state = inspector.solver.at_pose(q)
+            inspector.engine.set_configuration(state.q_rp, state.q_ab, close_rods=True)
+            snapshot = {}
+            for path, entry in annotations.entries.items():
+                inspector.renderer.update_scene(inspector.engine.data, camera=inspector.camera)
+                labels, _ = annotations.draw(inspector.renderer.scene, 0.04,
+                                            annotations.settings(dict(**options, parameters=[path])))
+                assert labels
+                text = " ".join(label[1] for label in labels)
+                for value in entry["values"]:
+                    expected = f"{value:.7g}" if isinstance(value, (int, float)) else value
+                    assert expected in text, (path, value, text)
+                snapshot[path] = labels
+            snapshots.append(snapshot)
+        for path in snapshots[0]:
+            first, second = snapshots[0][path], snapshots[1][path]
+            assert [label[1] for label in first] == [label[1] for label in second]
+            np.testing.assert_allclose([label[0] for label in first],
+                                       [label[0] for label in second], atol=1e-12)
+        # The assembly datum is (0,0,0), including when the model's home is nonzero.
+        inspector.renderer.update_scene(inspector.engine.data, camera=inspector.camera)
+        _, axes = annotations.draw(inspector.renderer.scene, 0.04,
+                                   annotations.settings({**options, "base_axes": True}))
+        assert len(axes) == 3
+        for i, (origin, end, _) in enumerate(axes):
+            np.testing.assert_array_equal(origin, [0, 0, 0])
+            assert end[i] > 0
+            np.testing.assert_array_equal(np.delete(end, i), [0, 0])
+    finally:
+        inspector.renderer.close()
+
+
+def test_parameter_buttons_can_combine_and_clear_annotations():
+    from para_joint_solver.visualization.inspector import Inspector
+
+    inspector = Inspector(load_solver("igris_c_waist"))
+    try:
+        baseline = inspector.render()["image"]
+        before = inspector.state
+        a, b = "branches.A.crank_tip", "branches.B.rod_length"
+        one = inspector.render(overlays=dict(parameters=[a]))["image"]
+        both = inspector.render(overlays=dict(parameters=[a, b]))["image"]
+        remaining = inspector.render(overlays=dict(parameters=[b]))["image"]
+        assert len({baseline, one, both, remaining}) == 4
+        assert inspector.render(overlays=dict(parameters=[]))["image"] == baseline
+        assert inspector.state is before
+    finally:
+        inspector.renderer.close()
+
+
+def test_annotation_projection_matches_rendered_points():
+    from para_joint_solver.visualization.inspector import Inspector
+    from para_joint_solver.visualization.labels import project
+
+    inspector = Inspector(load_solver("igris_c_waist"))
+    try:
+        mj = inspector.engine.mj
+        for azimuth in (135, 45):
+            inspector.camera.azimuth = azimuth
+            inspector.renderer.update_scene(inspector.engine.data, camera=inspector.camera)
+            scene = inspector.renderer.scene
+            camera = mj.mjv_averageCamera(*scene.camera)
+            scene.ngeom = 0
+            background = inspector.renderer.render().astype(float)
+            for point in ([0, 0, 0], [0.05, 0.05, 0.05]):
+                mj.mjv_initGeom(scene.geoms[0], mj.mjtGeom.mjGEOM_SPHERE, np.full(3, .0015),
+                                np.array(point), np.eye(3).ravel(),
+                                np.array([1, 0, 0, 1], np.float32))
+                scene.ngeom = 1
+                pixels = inspector.renderer.render().astype(float)
+                y, x = np.nonzero(np.max(np.abs(pixels - background), axis=2) > 30)
+                assert len(x)
+                expected = project(point, camera, 800, 600)
+                np.testing.assert_allclose([x.mean() + .5, y.mean() + .5], expected, atol=1)
+    finally:
+        inspector.renderer.close()

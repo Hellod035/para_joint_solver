@@ -16,6 +16,8 @@ from ..core.errors import (
 )
 from .config import inspection_range
 from .scene import camera_for
+from .annotations import Annotations
+from .labels import draw_frame_axes, draw_labels
 
 
 def limit_states(values, bounds):
@@ -61,6 +63,7 @@ class Inspector:
     def __init__(self, solver):
         self.solver = solver
         self.engine = MujocoBackend(solver, visual=True)
+        self.annotations = Annotations(self.engine)
         self.camera = camera_for(self.engine)
         self.camera_distance = self.camera.distance
         self.state = solver.at_pose(solver.mechanism.home_rp)
@@ -107,9 +110,10 @@ class Inspector:
         bounds[:, 1] = np.minimum(bounds[:, 1], self.ranges[:, 1])
         return [row.tolist() if row[0] <= row[1] else None for row in bounds]
 
-    def render(self, state=None, camera=None):
+    def render(self, state=None, camera=None, overlays=None):
         from PIL import Image
 
+        options = self.annotations.settings({} if overlays is None else overlays)
         if camera is not None:
             azimuth = float(camera["azimuth"])
             elevation = float(camera["elevation"])
@@ -122,8 +126,16 @@ class Inspector:
         state = self.state if state is None else state
         self.engine.set_configuration(state.q_rp, state.q_ab, close_rods=True)
         self.renderer.update_scene(self.engine.data, camera=self.camera)
+        labels, frame_axes = self.annotations.draw(
+            self.renderer.scene, self.camera_distance * 0.09, options
+        )
         buffer = BytesIO()
-        Image.fromarray(self.renderer.render()).save(buffer, format="JPEG", quality=88)
+        image = Image.fromarray(self.renderer.render())
+        camera = self.engine.mj.mjv_averageCamera(*self.renderer.scene.camera)
+        draw_frame_axes(image, frame_axes, camera)
+        draw_labels(image, labels, camera)
+        image.save(buffer, format="JPEG", quality=88)
+        self.annotations.options = options
         return dict(image="data:image/jpeg;base64," + base64.b64encode(buffer.getvalue()).decode())
 
     def update(self, request):
@@ -142,7 +154,7 @@ class Inspector:
         dq_rp, tau_ab = candidate.velocity_to_rp(dq), candidate.torque_to_ab(tau)
         solve_time_ms = (perf_counter_ns() - start) / 1e6
         ref = self.engine.solve(candidate.q_ab, seed=self.state.q_rp)
-        image = self.render(candidate)["image"]
+        image = self.render(candidate, overlays=request.get("overlays"))["image"]
         self.state = candidate  # Commit only after successful solve and render.
         return dict(
             robot=self.solver.mechanism.id,
@@ -190,6 +202,9 @@ def serve(solver, port=8765, open_browser=True):
         def do_GET(self):
             if self.path == "/":
                 self.send(200, page, "text/html; charset=utf-8")
+            elif self.path == "/guide":
+                self.send(200, json.dumps(inspector.annotations.description(), allow_nan=False)
+                          .encode(), "application/json; charset=utf-8")
             else:
                 self.send(404, b"Not found", "text/plain")
 
@@ -202,7 +217,7 @@ def serve(solver, port=8765, open_browser=True):
                     raise ValueError("Invalid request size")
                 request = json.loads(self.rfile.read(length))
                 result = (
-                    inspector.render(camera=request)
+                    inspector.render(camera=request, overlays=request.get("overlays"))
                     if self.path == "/camera"
                     else inspector.update(request)
                 )

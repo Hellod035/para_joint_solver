@@ -29,6 +29,32 @@ The displayed solve time covers core position, Jacobian, velocity and torque com
 The viewer displays kinematic poses. Each example has six meshes: base platform,
 output platform, two cranks, and two rods.
 
+The coordinate controls show the fixed mechanism base axes and the original axes
+of each STL after its `visuals.yaml` placement. X/Y/Z are red/green/blue. In the
+right-hand **各 STL 自身坐标系** panel, each file has an independent checkbox;
+multiple parts can be enabled together, or use **全部显示** to toggle all of them.
+STL frames start hidden and follow their parts during motion. Their short,
+unlabeled axes stay visible through meshes, like the assembly base axes. Axis
+lengths are illustrative, not STL unit lengths. Optional geometry annotations
+mark joint-axis directions, crank tips (`B_A`, `B_B`), and platform anchors
+(`C_A`, `C_B`). These overlays do not change the mechanism or its solve results.
+The assembly axes originate at the fixed `(0,0,0)` datum used by `mechanism.yaml`,
+which need not be the model's center. These short, thin red/green/blue arrows have
+no text labels and remain visible through the meshes. STL axes belong to individual parts.
+
+The right-hand **参数可视化** tab explains all mechanism fields in Chinese, including
+vector components, units, limits, scales, reference readings, names, and metadata.
+Numeric annotations start hidden. Each parameter button independently toggles
+its configured numbers on the model: a point with its XYZ coordinates, an axis vector, rod
+length, or joint-limit arc. Multiple buttons can stay enabled; **隐藏全部** clears
+them. The panel also includes the complete YAML snapshot loaded by the solver.
+These yellow parameter annotations stay at the reference geometry while the STL
+frames and purple joint axes follow the moving model. **Reset Home** aligns the
+model with the reference annotations. Limit arcs include the signed joint scale;
+their radius is illustrative. Scene labels use seven significant digits; the
+parameter panel retains the full loaded values.
+On a headless Linux machine, use `MUJOCO_GL=egl uv run pjs inspect igris_c_waist`.
+
 ## Benchmark
 
 ```bash

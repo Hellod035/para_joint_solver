@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Parallel joint inspector</title>
@@ -9,9 +9,11 @@ html{height:100%}
 body{margin:0;height:100dvh;display:grid;grid-template-rows:auto minmax(0,1fr);overflow:hidden;background:#101823;color:#dce7f1;font:13px system-ui,sans-serif}
 header{padding:10px 16px;border-bottom:1px solid #304052;display:flex;align-items:center;justify-content:space-between;gap:12px}
 h1{margin:0;font-size:18px}header p{margin:3px 0 0;color:#9db1c5;font-size:11px}
-main{display:grid;grid-template-columns:minmax(0,1fr) clamp(300px,28vw,360px);gap:10px;padding:10px;min-height:0;width:100%;max-width:1800px;margin:auto;height:100%}
+main{display:grid;grid-template-columns:minmax(0,1fr) clamp(340px,32vw,440px);gap:10px;padding:10px;min-height:0;width:100%;max-width:1800px;margin:auto;height:100%}
 main>section{display:flex;flex-direction:column;gap:8px;min-height:0;min-width:0}
-aside{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:8px;min-height:0}
+aside{display:grid;grid-template-rows:auto minmax(0,1fr);gap:8px;min-height:0}
+#control-tab{display:grid;grid-template-rows:minmax(0,1fr) auto;gap:8px;min-height:0;overflow:auto}
+[hidden]{display:none!important}
 .panel{background:#192635;border:1px solid #304052;border-radius:8px;padding:10px;min-width:0}
 h2{font-size:13px;margin:0 0 6px}.panel-title{display:flex;align-items:center;justify-content:space-between;gap:8px}.panel-title h2{margin:0}
 .render{position:relative;display:grid;grid-template-rows:minmax(0,1fr) auto;flex:1;min-height:0;padding:0;overflow:hidden}
@@ -40,14 +42,44 @@ input:disabled{opacity:.8}
 .output{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px 12px;margin-top:8px;align-items:start}
 .output small{display:block;color:#91aabf;font-size:10px}.output code{font:12px ui-monospace,monospace;white-space:pre;line-height:1.35;color:#c7dbe8}
 #status{font-size:11px;color:#8eceae;font-weight:normal}
+.view-options{display:flex;flex-wrap:wrap;align-items:center;gap:7px 14px}
+.view-options label{display:flex;align-items:center;gap:4px;cursor:pointer;white-space:nowrap}
+input[type=checkbox]{accent-color:#29b5cf}
+select,input[type=search]{background:#0f1c28;color:#e4eef7;border:1px solid #496071;border-radius:4px;padding:5px;font:inherit;max-width:100%}
+#frame-note{margin-top:6px;line-height:1.5;overflow-wrap:anywhere}
+.mesh-frames{margin:10px 0;padding:8px;border:1px solid #30485d;border-radius:5px;min-width:0}
+.mesh-frames legend{padding:0 5px;font-weight:600}.mesh-frames label{display:flex;align-items:center;gap:5px;cursor:pointer;min-width:0}
+#mesh-options{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:8px}
+#mesh-options span{overflow-wrap:anywhere;font:11px ui-monospace,monospace}
+.legend-x{color:#ff8d87}.legend-y{color:#7fe894}.legend-z{color:#8ebaff}
+.side-tabs{display:flex;gap:6px}.side-tabs button{flex:1}
+#parameter-tab{overflow:auto;scrollbar-gutter:stable;min-height:0}
+.guide-intro{font-size:12px;line-height:1.7;color:#b4c9dc;margin:6px 0 12px}
+.guide-intro strong{color:#e5eff7}
+#parameter-search{width:100%;margin:5px 0 10px}
+.parameter-group{border-top:1px solid #3c5064;padding-top:10px;margin-top:8px}
+.parameter-group summary{font-weight:600;cursor:pointer;padding-bottom:8px}
+.parameter{display:block;width:100%;text-align:left;white-space:normal;margin:6px 0;padding:10px;background:#12202e;border:1px solid #30485d;border-radius:6px}
+.parameter:hover{border-color:#6c96ac}.parameter.selected{background:#23392f;border-color:#e0cd5f}
+.parameter-title{display:block;font-weight:600;margin-bottom:5px}.parameter-path{display:block;color:#9bb9d0;overflow-wrap:anywhere;font-size:11px;margin-bottom:6px}
+.parameter-values{display:flex;flex-wrap:wrap;gap:4px 10px;color:#e1edf5;font:12px ui-monospace,monospace;line-height:1.6}
+.parameter-meaning{display:block;color:#b2c5d6;font-size:12px;line-height:1.65;margin-top:6px}
+.parameter-conversion{display:block;color:#8fb5c6;font-size:11px;margin-top:4px}
+.parameter-state{float:right;font-size:11px;font-weight:400;color:#8fbdcd;margin-left:8px}.parameter.selected .parameter-state{color:#f4df80}
+.metadata{padding:8px 0;border-top:1px solid #30485d;overflow-wrap:anywhere}.metadata code{color:#a5cce1}.metadata p{white-space:pre-wrap;line-height:1.6;margin:5px 0}
+#source-yaml{font:11px/1.6 ui-monospace,monospace;white-space:pre-wrap;overflow-wrap:anywhere;color:#a5cce1}
+.selection-note{font-size:11px;line-height:1.5;color:#eee0a4;margin-top:6px;overflow-wrap:anywhere}
+#clear-selection{padding:2px 7px;margin-left:6px;font-size:11px}
+button:focus-visible,summary:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid #62c9e0;outline-offset:2px}
 @media(max-width:1100px){.output{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-height:650px){body{font-size:11px}header{padding:6px 12px}h1{font-size:16px}main{padding:6px;gap:6px}aside,main>section{gap:6px}.panel{padding:7px}.render{padding:0}.input-panel{gap:3px}h2{font-size:12px;margin-bottom:4px}.row,.pair{margin:3px 0;gap:6px}input[type=number]{padding:3px;font-size:11px}button{padding:4px 8px}.limit{font-size:10px;margin-bottom:3px}.hint{font-size:10px}.metric{padding:5px}.metric small{margin-bottom:2px}.output{margin-top:5px;gap:3px 10px}.output code{font-size:11px}.caption{padding:4px 8px}}
+@media(max-width:760px){body{height:auto;min-height:100dvh;overflow:auto}main{display:flex;flex-direction:column;height:auto}main>section{min-height:520px}.render{min-height:280px}aside{min-height:450px}#parameter-tab{max-height:65dvh}#control-tab{min-height:440px}.view-options{gap:6px 10px}header p{max-width:230px}}
 </style>
 
 <header><div><h1>Parallel joint · <span id="robot">Loading</span></h1><p>Adjust AB or RP and compare the six-part model with MuJoCo geometry</p></div><button id="reset">Reset Home</button></header>
 <main>
 <section>
-  <div class="panel render"><img id="image" alt="Live MuJoCo model" draggable="false" aria-describedby="camera-help"><div class="caption"><span id="camera-help">Drag to rotate · Scroll to zoom · Double-click to reset view</span><br>Gray: base · Blue: output · Orange: cranks · Silver: rods</div><div class="error" id="error" role="alert"></div></div>
+  <div class="panel render"><img id="image" alt="Live MuJoCo model" draggable="false" aria-describedby="camera-help"><div class="caption"><span id="camera-help">拖动旋转 · 滚轮缩放 · 双击重置视角</span><br>灰：基座 · 蓝：输出平台 · 橙：曲柄 · 银：连杆。紫色箭头：物理转轴正方向；B_A/B_B：曲柄端；C_A/C_B：平台端。</div><div class="error" id="error" role="alert"></div></div>
   <div class="panel"><h2>Cross-validation <span id="status" title="Core position, Jacobian, velocity and torque computation only."></span></h2><div class="metrics">
     <div class="metric"><small>RP error / rad</small><strong id="poseError">—</strong></div>
     <div class="metric"><small>Closure gap / m</small><strong id="rodGap">—</strong></div>
@@ -63,6 +95,8 @@ input:disabled{opacity:.8}
   </div></div>
 </section>
 <aside>
+  <div class="side-tabs" role="tablist" aria-label="查看器侧栏"><button id="tab-controls" role="tab" aria-selected="false" aria-controls="control-tab" tabindex="-1">运动控制</button><button id="tab-parameters" role="tab" aria-selected="true" aria-controls="parameter-tab" class="selected">参数可视化</button></div>
+  <div id="control-tab" role="tabpanel" aria-labelledby="tab-controls" hidden>
   <div class="panel input-panel"><div class="panel-title"><h2>Input</h2><div class="mode"><button id="mode-rp" class="selected">Adjust RP</button><button id="mode-ab">Adjust AB</button></div></div>
     <div id="controls-rp"><strong>Output angles RP / rad</strong>
       <div class="row"><label>Roll</label><input id="rp0" class="feasible-range" aria-label="Roll slider" type="range" min="-1" max="1" step="any" value="0"><input id="rp0n" aria-label="Roll angle" type="number" step="0.001" value="0"></div><div id="rp0limit" class="limit">Loading limits…</div>
@@ -79,12 +113,38 @@ input:disabled{opacity:.8}
     <p class="pair"><label>τ_RP</label><input id="tau0" type="number" step="0.1" value="1"><input id="tau1" type="number" step="0.1" value="1"></p>
     <p class="hint">dq_AB [A,B] in rad/s; torque RP [roll,pitch] in N·m.</p>
   </div>
+  </div>
+  <div id="parameter-tab" class="panel" role="tabpanel" aria-labelledby="tab-parameters">
+    <h2>坐标系与辅助显示</h2>
+    <div class="view-options" aria-label="坐标系与机构标注">
+      <label><input id="base-axes" type="checkbox" checked>整机基坐标系</label>
+      <label><input id="geometry" type="checkbox">当前关节轴 / 连接点</label>
+      <label><input id="transparent" type="checkbox">透明网格</label>
+    </div>
+    <p class="hint" id="frame-note">整机 BASE O = (0,0,0) m；X 红 · Y 绿 · Z 蓝。整机轴透过网格显示；STL 坐标系随零件运动。</p>
+    <fieldset class="mesh-frames"><legend>各 STL 自身坐标系</legend>
+      <div class="panel-title"><label><input id="stl-axes" type="checkbox" disabled>全部显示</label><span id="stl-count" class="hint">加载中…</span></div>
+      <div id="mesh-options"></div>
+      <p class="hint" style="margin-top:8px">可独立开启多个零件。轴随零件运动，透过网格显示；默认关闭。</p>
+    </fieldset>
+    <h2 style="margin-top:16px">mechanism.yaml · 参数显示按钮</h2>
+    <p class="guide-intro"><strong>数值标注默认关闭。</strong>点击下面的参数按钮可显示 / 隐藏对应的位置点与 XYZ 坐标、方向向量、连杆长度或角度弧；可以同时开启多项。<br>配置值固定在<strong>参考姿态的几何位置</strong>；Reset Home 让模型与标注对齐。图中数值按 7 位有效数字显示，下面保留完整精度。</p>
+    <div id="selection-note" class="selection-note"><span id="selection-text">未显示参数标注</span><button id="clear-selection" disabled>隐藏全部</button></div>
+    <p class="hint" id="mechanism-order"></p>
+    <input id="parameter-search" type="search" aria-label="搜索参数" placeholder="搜索字段或中文含义，例如 axis、连杆">
+    <div id="parameter-groups">正在加载参数…</div>
+    <details class="parameter-group"><summary>机构信息 · id / topology / description / sources</summary><div id="mechanism-metadata"></div></details>
+    <details class="parameter-group"><summary>完整 mechanism.yaml · 本次加载内容</summary><pre id="source-yaml"></pre></details>
+    <p class="guide-intro">STL 坐标轴是文件原点和 X/Y/Z 方向，经 <code>visuals.yaml</code> 的 scale、pose 放置后显示。轴长与限位弧半径仅作示意。多个坐标系可能重合，可按文件筛选或打开透明网格。</p>
+  </div>
 </aside>
 </main>
 <script>
 const el=id=>document.getElementById(id);
 let mode='rp', pending=null, pendingCamera=null, busy=false, revision=0, lastData=null;
 let camera={azimuth:135,elevation:-18,zoom:1}, drag=null;
+let guide=null;
+const overlays={base_axes:true,stl_frames:[],geometry:false,transparent:false,parameters:[]};
 const axes=['rp','ab'];
 const angles={rp:[0,0],ab:[0,0]};
 function controls(){for(const group of axes){el('mode-'+group).classList.toggle('selected',group===mode);for(let i=0;i<2;i++)for(const suffix of ['','n'])el(group+i+suffix).disabled=!lastData||group!==mode||(group==='rp'&&suffix===''&&!lastData.feasible_rp[i])}}
@@ -128,7 +188,7 @@ function setAngle(group,i,value,number=true){
 function requestUpdate(reset=false){
   const request={mode,q:[...angles[mode]],reset,
     dq_ab:[el('dq0').valueAsNumber,el('dq1').valueAsNumber],tau_rp:[el('tau0').valueAsNumber,el('tau1').valueAsNumber],
-    revision:++revision};
+    overlays:{...overlays},revision:++revision};
   if(![...request.q,...request.dq_ab,...request.tau_rp].every(Number.isFinite)){
     pending=null;el('status').textContent='Enter complete, finite numbers';return;
   }
@@ -148,6 +208,7 @@ function paint(data,request){
   for(const [id,value] of [['outRP',data.q_rp],['outAB',data.q_ab],['outVelocity',data.dq_rp],['outTorque',data.tau_ab]])el(id).textContent=pair(value);
   el('outCondition').textContent=data.condition.toFixed(3);
   el('outJ').textContent=pair(data.J[0])+'\n'+pair(data.J[1]);
+  refreshSelection();
 }
 function showError(data){
   const labels={limit:'Outside configured limits',unreachable:'Closed-chain pose is unreachable',singular:'Near a singular configuration',convergence:'Forward solve did not converge from this seed',input:'Invalid input'};
@@ -196,7 +257,7 @@ for(const group of axes){
   }
 }
 const viewport=el('image'), clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
-function requestCamera(){pendingCamera={...camera};send()}
+function requestCamera(){pendingCamera={...camera,overlays:{...overlays}};send()}
 viewport.onpointerdown=event=>{
   if(!lastData||!event.isPrimary||event.button!==0)return;
   event.preventDefault();viewport.setPointerCapture(event.pointerId);
@@ -225,6 +286,111 @@ el('reset').onclick=()=>{
   // Home also recovers from an unfinished/invalid numeric edit.
   if(lastData)for(const g of axes)for(let i=0;i<2;i++)setAngle(g,i,lastData['q_'+g][i]);requestUpdate(true);
 };
+function showTab(parameters){
+  el('control-tab').hidden=parameters;el('parameter-tab').hidden=!parameters;
+  for(const [id,active] of [['tab-controls',!parameters],['tab-parameters',parameters]]){
+    el(id).classList.toggle('selected',active);el(id).setAttribute('aria-selected',String(active));el(id).tabIndex=active?0:-1;
+  }
+}
+el('tab-controls').onclick=()=>showTab(false);
+el('tab-parameters').onclick=()=>showTab(true);
+for(const id of ['tab-controls','tab-parameters'])el(id).onkeydown=event=>{
+  if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+  event.preventDefault();const parameters=event.key==='End'||(event.key!=='Home'&&id==='tab-controls');
+  showTab(parameters);el(parameters?'tab-parameters':'tab-controls').focus();
+};
+function refreshSelection(){
+  document.querySelectorAll('.parameter').forEach(button=>{
+    const active=overlays.parameters.includes(button.dataset.path);
+    button.classList.toggle('selected',active);button.setAttribute('aria-pressed',String(active));
+    button.querySelector('.parameter-state').textContent=active?'已显示 · 点击隐藏':'显示标注';
+    const live=button.querySelector('.parameter-live');
+    if(live&&guide&&lastData){
+      const entries=guide.groups.flatMap(g=>g.entries), entry=entries.find(e=>e.path===button.dataset.path);
+      const isMotor=entry.target.startsWith('motor:'), name=entry.target.split(':')[1];
+      const index=(isMotor?['A','B']:['roll','pitch']).indexOf(name);
+      const assembly=entries.find(e=>e.path===(isMotor?'assembly.motor_reference':'assembly.home_rp'));
+      const q=lastData[isMotor?'q_ab':'q_rp'][index], ref=assembly.values[index], scale=entry.values[0];
+      live.textContent=`当前物理转角：${scale} × (${q.toFixed(5)} − ${ref}) = ${(scale*(q-ref)).toFixed(5)} rad`;
+    }
+  });
+  const count=overlays.parameters.length;
+  el('clear-selection').disabled=!count;
+  el('selection-text').textContent=count?`已显示 ${count} 项参考参数。黄色为参考几何；Reset Home 可对齐。`:'未显示参数标注';
+}
+el('clear-selection').onclick=()=>{overlays.parameters=[];refreshSelection();requestCamera()};
+function updateFrameNote(){
+  const count=overlays.stl_frames.length, total=guide?.meshes.length||0;
+  el('stl-axes').disabled=!total;
+  el('stl-axes').checked=total>0&&count===total;
+  el('stl-axes').indeterminate=count>0&&count<total;
+  el('stl-count').textContent=`已显示 ${count} / ${total}`;
+  document.querySelectorAll('#mesh-options input').forEach(input=>{input.checked=overlays.stl_frames.includes(input.dataset.meshId)});
+  el('frame-note').textContent='整机原点 = (0,0,0) m；X 红 · Y 绿 · Z 蓝。整机与 STL 坐标轴均透过网格显示。';
+}
+for(const [id,key] of [['base-axes','base_axes'],['geometry','geometry'],['transparent','transparent']]){
+  el(id).onchange=()=>{overlays[key]=el(id).checked;updateFrameNote();requestCamera()};
+}
+el('stl-axes').onchange=()=>{overlays.stl_frames=el('stl-axes').checked?guide.meshes.map(mesh=>mesh.id):[];updateFrameNote();requestCamera()};
+function node(tag,className,text){const element=document.createElement(tag);element.className=className;element.textContent=text;return element}
+function renderGuide(){
+  if(!guide)return;
+  const query=el('parameter-search').value.trim().toLowerCase(), container=el('parameter-groups');
+  container.replaceChildren();
+  for(const [index,group] of guide.groups.entries()){
+    const entries=group.entries.filter(entry=>(entry.path+' '+entry.title+' '+entry.meaning+' '+group.title).toLowerCase().includes(query));
+    if(!entries.length)continue;
+    const details=node('details','parameter-group','');details.open=Boolean(query)||index===0;
+    details.append(node('summary','',group.title));
+    for(const entry of entries){
+      const button=node('button','parameter','');button.type='button';button.dataset.path=entry.path;
+      const title=node('span','parameter-title','');title.append(node('span','parameter-state','显示标注'),document.createTextNode(entry.title));
+      button.append(title,node('code','parameter-path',entry.path));
+      const values=node('span','parameter-values','');
+      entry.values.forEach((value,i)=>values.append(node('span','',`${entry.components[i]} = ${value}${entry.unit?' '+entry.unit:''}`)));
+      button.append(values);
+      if(entry.unit==='rad')button.append(node('span','parameter-conversion','角度换算：'+entry.values.map((v,i)=>`${entry.components[i]} ${(v*180/Math.PI).toFixed(3)}°`).join(' · ')));
+      if(entry.unit==='m')button.append(node('span','parameter-conversion','毫米换算：'+entry.values.map((v,i)=>`${entry.components[i]} ${Number((v*1000).toPrecision(10))} mm`).join(' · ')));
+      button.append(node('span','parameter-meaning',entry.meaning));
+      if(entry.path.endsWith('.scale'))button.append(node('span','parameter-conversion parameter-live',''));
+      if(entry.path.endsWith('.limits')&&entry.values.length)button.append(node('span','parameter-conversion','角度弧以 ref 为参考射线，计入 scale，半径仅作示意。'));
+      button.onclick=()=>{
+        overlays.parameters=overlays.parameters.includes(entry.path)?overlays.parameters.filter(p=>p!==entry.path):[...overlays.parameters,entry.path];
+        refreshSelection();requestCamera();
+      };
+      details.append(button);
+    }
+    container.append(details);
+  }
+  if(!container.childElementCount)container.append(node('p','hint','没有匹配的参数。'));
+  refreshSelection();
+}
+async function loadGuide(){
+  try{
+    const response=await fetch('/guide');if(!response.ok)throw new Error('HTTP '+response.status);
+    guide=await response.json();
+    el('mechanism-order').textContent='拓扑：双曲柄、双连杆。输出关节物理顺序：'+guide.output_order.join(' → ')+'；公共 RP 数组始终为 [roll, pitch]。scale 展示生效值（省略时为 1）。';
+    for(const mesh of guide.meshes){
+      const label=node('label','',''), input=document.createElement('input');input.type='checkbox';input.dataset.meshId=mesh.id;
+      label.title=`${mesh.file} · frame=${mesh.frame} · scale=[${mesh.scale.join(', ')}]`;
+      label.append(input,node('span','',mesh.name));el('mesh-options').append(label);
+      input.onchange=()=>{
+        overlays.stl_frames=input.checked?[...overlays.stl_frames,mesh.id]:overlays.stl_frames.filter(id=>id!==mesh.id);
+        updateFrameNote();requestCamera();
+      };
+    }
+    for(const entry of guide.metadata){
+      const item=node('div','metadata','');
+      const value=Array.isArray(entry.value)?(entry.value.length?entry.value.join('\n'):'（空列表）'):String(entry.value);
+      item.append(node('code','',entry.path),node('p','',value),node('p','hint',entry.meaning));
+      el('mechanism-metadata').append(item);
+    }
+    el('source-yaml').textContent=guide.source_yaml||'此机构由代码构造，未关联 YAML 文件。';
+    renderGuide();updateFrameNote();
+  }catch(error){el('parameter-groups').textContent='参数加载失败：'+error.message+'。请刷新页面重试。'}
+}
+el('parameter-search').oninput=renderGuide;
+loadGuide();
 controls();requestUpdate(true);
 </script>
 </html>
